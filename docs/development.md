@@ -96,6 +96,6 @@ Cover Flow 按鈕放在音量控制左側，視覺尺寸、可點擊區與顏色
 
 開始實作前先依 [`spec.md`](./spec.md) 提出可驗收的 Definition of Done，取得使用者確認後才修改程式碼。每一階段依「實作、執行 Unit Test、手動驗證、報告」完成。
 
-開發中遇到可重現的頁面陷阱、selector 失效、圖片限制或效能問題時，將事實與重現條件記錄到 [`findings.md`](./findings.md)。只有從實際證據歸納出可重複採用的做法後，才更新 [`rules.md`](./rules.md)。
+開發中遇到可重現的頁面陷阱、selector 失效、圖片限制或效能問題時，將事實與重現條件記錄到 [`findings.md`](./findings.md)。使用者明確指定的工作流程應直接更新至 [`rules.md`](./rules.md)；從實作或除錯歸納的 Lessons Learned，則必須有實際證據才能加入。
 
 若實作需要改變 `spec.md` 的產品行為，立即停止相關修改，先說明衝突並取得使用者同意。文件與程式碼的變更都必須經過 diff 檢查；除非使用者另外要求，不自動 commit 或 push。

@@ -8,7 +8,7 @@
 
 [`development.md`](./development.md) 說明目前預期的技術邊界、實作策略與驗證方式。它可以隨實作細節調整，但不得改寫 `spec.md` 定義的產品行為。
 
-[`findings.md`](./findings.md) 用來記錄開發過程中實際遇到的陷阱與已驗證事實。[`rules.md`](./rules.md) 用來沉澱由實作與除錯得到的 Lessons Learned。兩份文件目前只建立用途，等有證據後再補充。
+[`findings.md`](./findings.md) 用來記錄開發過程中實際遇到的陷阱與已驗證事實，目前只建立用途。[`rules.md`](./rules.md) 記錄使用者已確認的開發與 commit 流程，並在後續沉澱由實作與除錯得到的 Lessons Learned。
 
 ## 目前狀態
 
