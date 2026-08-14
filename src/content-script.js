@@ -10,6 +10,7 @@
   const STYLE_ID = "ytm-cover-flow-shell-style";
   const APP_LAYOUT_SELECTOR = "ytmusic-app-layout#layout";
   const PLAYER_BAR_SELECTOR = "ytmusic-player-bar";
+  const PLAYER_BAR_ACTIVE_CLASS = "ytm-cover-flow-active";
   const VOLUME_SELECTOR = "#right-controls #volume-slider";
   const PLAYER_BAR_MIN_HEIGHT = 72;
   const QUEUE_SELECTORS = Object.freeze({
@@ -107,6 +108,10 @@
         height: 24px;
         pointer-events: none;
         width: 24px;
+      }
+
+      ${PLAYER_BAR_SELECTOR}.${PLAYER_BAR_ACTIVE_CLASS} {
+        z-index: 1000 !important;
       }
     `;
     document.head.append(style);
@@ -1008,6 +1013,7 @@
     host.style.display = isOpen ? "block" : "none";
     host.style.pointerEvents = isOpen ? "auto" : "none";
     getButton()?.setAttribute("aria-pressed", String(isOpen));
+    playerBar?.classList.toggle(PLAYER_BAR_ACTIVE_CLASS, isOpen);
 
     if (isOpen) {
       queueSnapshot = captureQueueSnapshot();
@@ -1078,7 +1084,9 @@
     }
 
     playerBarObserver?.disconnect();
+    playerBar?.classList.remove(PLAYER_BAR_ACTIVE_CLASS);
     playerBar = nextPlayerBar;
+    playerBar.classList.toggle(PLAYER_BAR_ACTIVE_CLASS, isOpen);
     playerBarObserver = new MutationObserver(schedulePlayerButtonCheck);
     playerBarObserver.observe(playerBar, { childList: true, subtree: true });
   }
