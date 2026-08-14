@@ -4,7 +4,7 @@
 
 ## 目前狀態
 
-MVP 第一、二階段已由 commit `b61d299` 完成，第三階段「Cover Flow 視覺、動畫與瀏覽輸入」已由 commit `1226559` 完成。方向鍵操作時 viewport 外圍的白色 focus box 已移除，保留焦點與鍵盤行為，並納入 commit `3b569e0`。第四階段「播放整合與狀態同步」已由 commit `ec438b1` 完成。seekbar 遮擋修正已由 commit `b87e939` 完成並推送至 `origin/master`。
+MVP 第一、二階段已由 commit `b61d299` 完成，第三階段「Cover Flow 視覺、動畫與瀏覽輸入」已由 commit `1226559` 完成。方向鍵操作時 viewport 外圍的白色 focus box 已移除，保留焦點與鍵盤行為，並納入 commit `3b569e0`。第四階段「播放整合與狀態同步」已由 commit `ec438b1` 完成。seekbar 遮擋修正已由 commit `b87e939` 完成並推送至 `origin/master`；擴充套件圖示更新已由 commit `92bd081` 完成並推送至 `origin/master`。
 
 已核准的第三階段 DoD：呈現中央與兩側透視封面、倒影、中央曲目文字及圖片 Placeholder；支援方向鍵、滾輪、觸控板橫向輸入、拖曳與側邊封面點擊；以連續位置驅動動畫並在邊界內吸附。中央封面、Play Button、`Enter` 播放與原生播放同步仍留在下一階段。
 
@@ -26,7 +26,7 @@ BrowserOS Neo 啟用內容阻擋擴充套件時，YouTube 的 `/generate_204`、
 
 ## 下一步
 
-圖示更新已完成，等待使用者核准 commit。已離開 BrowserOS 瀏覽器環境，但 BrowserOS 與 BrowserOS Neo MCP 工具仍可用於實站驗證，不依賴其瀏覽器視窗或其工作區。開始下一階段前，依 `docs/rules.md` 另提 Definition of Done 並取得核准。
+目前沒有已排定的下一階段。已離開 BrowserOS 瀏覽器環境，但 BrowserOS 與 BrowserOS Neo MCP 工具仍可用於實站驗證，不依賴其瀏覽器視窗或其工作區。開始下一階段前，依 `docs/rules.md` 另提 Definition of Done 並取得核准。
 
 ## 開發紀錄
 
@@ -58,4 +58,4 @@ BrowserOS Neo 啟用內容阻擋擴充套件時，YouTube 的 `/generate_204`、
 
 seekbar 遮擋修正以 commit `b87e939` 完成並推送至 `origin/master`。首次非互動式 SSH push 沒有輸出且分支仍為 ahead；改以 TTY 重試相同指令後成功，已將驗證方式整理至 `docs/rules.md` 的 Git push Lessons Learned。
 
-使用者提供灰色標記截圖，完成四個標準擴充套件圖示尺寸與 manifest 宣告；圖示直接由原圖的標記與背景製作，不重繪圖樣。待使用者核准完整 diff 與 commit 草稿。
+使用者提供灰色標記截圖，完成四個標準擴充套件圖示尺寸與 manifest 宣告；圖示直接由原圖的標記與背景製作，不重繪圖樣。以 commit `92bd081` 完成並推送至 `origin/master`。
