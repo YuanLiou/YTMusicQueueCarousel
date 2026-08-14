@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Music Queue Cover Flow",
+  "version": "0.1.0",
+  "description": "Browse the current YouTube Music queue with a Cover Flow interface.",
+  "permissions": ["activeTab"],
+  "host_permissions": ["https://music.youtube.com/*"],
+  "action": {
+    "default_title": "切換 Cover Flow"
+  },
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://music.youtube.com/*"],
+      "js": ["src/core.js", "src/content-script.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

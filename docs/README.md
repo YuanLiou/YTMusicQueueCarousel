@@ -8,8 +8,10 @@
 
 [`development.md`](./development.md) 說明目前預期的技術邊界、實作策略與驗證方式。它可以隨實作細節調整，但不得改寫 `spec.md` 定義的產品行為。
 
-[`findings.md`](./findings.md) 用來記錄開發過程中實際遇到的陷阱與已驗證事實，目前只建立用途。[`rules.md`](./rules.md) 記錄使用者已確認的開發與 commit 流程，並在後續沉澱由實作與除錯得到的 Lessons Learned。
+[`findings.md`](./findings.md) 用來記錄開發過程中實際遇到的陷阱與已驗證事實。[`rules.md`](./rules.md) 記錄使用者已確認的開發與 commit 流程，並在後續沉澱由實作與除錯得到的 Lessons Learned。
+
+[`progress.md`](./progress.md) 是跨討論串的開發交接入口，精簡列出目前階段、已完成內容、驗證結果、已知限制與下一步。開始工作時在本文件之後立即閱讀它；每次開發結束前更新最新狀態與一筆日期紀錄。
 
 ## 目前狀態
 
-2026-08-14 已完成 MVP 規格訪談與文件基準。Git repository 已初始化，但擴充套件程式碼尚未開始實作。
+2026-08-14 已完成 MVP 規格訪談與文件基準。實作進度與最新驗證狀態以 [`progress.md`](./progress.md) 為準。
