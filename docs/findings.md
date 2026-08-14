@@ -35,3 +35,19 @@
 結論：使用 MAIN world bridge 唯讀擷取 queue row data，再以序列化事件交給 isolated content script；isolated 端只接受已知 YouTube 圖片 host。DOM fallback 中已驗證的 `yt3.googleusercontent.com`／`lh3.googleusercontent.com` 尺寸參數可安全提升至至少 544×544，不修改其他 host 的 URL。
 
 補充：bridge 與 isolated content script 的 `sourceKey` 必須都以 `#contents.children` 的原始 DOM 位置建立。若 isolated 端先用 selector 排除非歌曲節點再編號，遇到混合節點時會與 bridge 錯位，造成封面或文字配錯曲目。實站插入一個非歌曲節點後，33 首順序、前七張 544×544 封面與標題對應均維持正確。
+
+## 2026-08-14：目前播放狀態應以 MAIN world bridge 為準
+
+條件：擴充套件覆蓋層開啟時，從原生播放器切換「上一首」或「下一首」。
+
+現象：頁面 DOM 中新 row 的 `selected` 與 `play-button-state` 會正確變更，但 isolated content script 對既有 Polymer row 讀到的資料可能滯後，跨世界 `MutationObserver` 也不能作為唯一觸發來源。
+
+結論：覆蓋層開啟時以短週期讀取 MAIN world queue bridge 回傳的 `isCurrent`，再將對應的既有快照卡片置中；MutationObserver 僅作為加速同步，不能決定目前播放曲目。
+
+## 2026-08-14：拖曳層的 pointer capture 會攔截內層按鈕
+
+條件：中央卡片 hover 後，以實際滑鼠指標點擊內層圓形播放按鈕。
+
+現象：viewport 的 `pointerdown` 會立即取得 pointer capture，後續 click 被重新導向拖曳層；程式直接呼叫按鈕 `.click()` 不會經過 pointer 流程，因此會產生錯誤的通過結果。
+
+結論：播放按鈕必須在 `pointerdown` 停止冒泡，避免 viewport 取得 capture，並保留自己的 click handler。播放按鈕驗證必須使用實際指標 hover 與點擊，不能只用程式化 `.click()`。

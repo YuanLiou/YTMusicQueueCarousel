@@ -4,7 +4,7 @@
 
 ## 目前狀態
 
-MVP 第一、二階段已由 commit `b61d299` 完成，第三階段「Cover Flow 視覺、動畫與瀏覽輸入」已由 commit `1226559` 完成。方向鍵操作時 viewport 外圍的白色 focus box 已移除，保留焦點與鍵盤行為，並納入 commit `3b569e0`。
+MVP 第一、二階段已由 commit `b61d299` 完成，第三階段「Cover Flow 視覺、動畫與瀏覽輸入」已由 commit `1226559` 完成。方向鍵操作時 viewport 外圍的白色 focus box 已移除，保留焦點與鍵盤行為，並納入 commit `3b569e0`。第四階段「播放整合與狀態同步」已完成實作與驗證，待使用者核准 commit。
 
 已核准的第三階段 DoD：呈現中央與兩側透視封面、倒影、中央曲目文字及圖片 Placeholder；支援方向鍵、滾輪、觸控板橫向輸入、拖曳與側邊封面點擊；以連續位置驅動動畫並在邊界內吸附。中央封面、Play Button、`Enter` 播放與原生播放同步仍留在下一階段。
 
@@ -14,13 +14,15 @@ MVP 第一、二階段已由 commit `b61d299` 完成，第三階段「Cover Flow
 
 2026-08-14：focus box 修正後 `npm test` 共 16 項通過，`src/content-script.js` 通過 `node --check`，`git diff --check` 通過。BrowserOS Neo 實際按下右方向鍵後，選取從索引 0 移至 1，viewport 仍保有焦點；其 `::after` content 為 `none`、border 為 `0px`，畫面不再顯示外圍白框。
 
+2026-08-14：第四階段新增中央封面懸浮播放按鈕、中央封面及 `Enter` 播放、原生 queue row 播放委派與目前播放曲目同步。`npm test` 共 17 項通過，四個 JavaScript 檔案通過 `node --check`，`git diff --check` 通過。BrowserOS Neo 已實測側邊選取「人什麼的最麻煩了」不切換播放，按 `Enter` 後原生播放器切換至該曲；修正拖曳層 pointer capture 後，以實際指標 hover 並點擊中央圓形播放按鈕，原生播放器從「懸日」切換至「人什麼的最麻煩了」；原生「下一首」從「懸日」切換到「或是一首歌」後，Carousel 中央卡片同步切換。使用者手動驗證中央播放按鈕可點擊播放。
+
 ## 已知限制
 
 BrowserOS Neo 啟用內容阻擋擴充套件時，YouTube 的 `/generate_204`、`log_event`、`stats/qoe` 與 `ptracking` 請求會在 DevTools console 顯示 `ERR_BLOCKED_BY_CLIENT`；這是環境噪音，不是 Cover Flow 錯誤。
 
 ## 下一步
 
-Focus box 視覺修正完成。已離開 BrowserOS 瀏覽器環境，但 BrowserOS 與 BrowserOS Neo MCP 工具仍可用於實站驗證，不依賴其瀏覽器視窗或其工作區。開始下一階段前，依 `docs/rules.md` 另提 Definition of Done 並取得核准。
+第四階段完成，等待 commit 核准。已離開 BrowserOS 瀏覽器環境，但 BrowserOS 與 BrowserOS Neo MCP 工具仍可用於實站驗證，不依賴其瀏覽器視窗或其工作區。開始下一階段前，依 `docs/rules.md` 另提 Definition of Done 並取得核准。
 
 ## 開發紀錄
 
@@ -45,3 +47,5 @@ Focus box 視覺修正完成。已離開 BrowserOS 瀏覽器環境，但 Browser
 移除 `AGENTS.md` 的 BrowserOS 管理區塊。後續仍可使用 BrowserOS 與 BrowserOS Neo MCP 工具，但驗證不依賴 BrowserOS 瀏覽器視窗或其工作區。
 
 使用者核准將所有公開名稱由 Cover Flow 改為 YouTube Music Queue Carousel；內部 `ytm-cover-flow` 識別字維持不變以避免影響既有整合。`npm test` 16 項通過，四個 JavaScript 檔案通過 `node --check`，`manifest.json` 與 `package.json` JSON 解析通過，`git diff --check` 通過。
+
+完成第四階段：中央封面懸浮時顯示可存取的播放按鈕，中央封面、播放按鈕與 `Enter` 都委派至原生 queue 播放控制；側邊選取仍只瀏覽。覆蓋層開啟期間使用 MAIN world queue bridge 同步原生目前曲目，避免 isolated content script 讀取 Polymer row data 與跨世界 MutationObserver 更新不穩定的限制。17 項 Unit Test、靜態檢查與 BrowserOS Neo 實站播放及同步驗證通過，待使用者核准完整 diff 與 commit 草稿。

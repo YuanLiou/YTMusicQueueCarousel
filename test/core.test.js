@@ -149,6 +149,25 @@ test("finds a playing track by video id before title and artist", () => {
   assert.equal(core.findTrackIndex(items, { title: "不存在" }), -1);
 });
 
+test("matches playback targets without accepting ambiguous fallback identities", () => {
+  const item = {
+    videoId: "target",
+    title: "同名",
+    artist: "甲"
+  };
+
+  assert.equal(core.isSameTrack(item, { videoId: "target", title: "其他", artist: "乙" }), true);
+  assert.equal(core.isSameTrack(item, { videoId: "other", title: "同名", artist: "甲" }), false);
+  assert.equal(core.isSameTrack(
+    { title: "同名", artist: "甲" },
+    { title: "同名", artist: "甲" }
+  ), true);
+  assert.equal(core.isSameTrack(
+    { title: "同名", artist: "甲" },
+    { title: "同名" }
+  ), false);
+});
+
 test("clamps and settles indexes at queue boundaries", () => {
   assert.equal(core.clampIndex(-8, 4), 0);
   assert.equal(core.clampIndex(2.9, 4), 2);

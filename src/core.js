@@ -208,6 +208,31 @@
     ));
   }
 
+  function isSameTrack(item, identity) {
+    if (!item || !identity) {
+      return false;
+    }
+
+    const itemVideoId = cleanText(item.videoId);
+    const identityVideoId = cleanText(identity.videoId);
+    if (itemVideoId || identityVideoId) {
+      return Boolean(itemVideoId && identityVideoId && itemVideoId === identityVideoId);
+    }
+
+    const itemTitle = cleanText(item.title);
+    const identityTitle = cleanText(identity.title);
+    const itemArtist = cleanText(item.artist);
+    const identityArtist = cleanText(identity.artist);
+    return Boolean(
+      itemTitle
+      && identityTitle
+      && itemArtist
+      && identityArtist
+      && itemTitle === identityTitle
+      && itemArtist === identityArtist
+    );
+  }
+
   function clampIndex(index, length) {
     if (!Number.isFinite(length) || length <= 0) {
       return -1;
@@ -361,6 +386,7 @@
     getCoverLayout,
     getVisibleRange,
     isToggleMessage,
+    isSameTrack,
     isTrustedArtworkUrl,
     isUsableImageUrl,
     isYouTubeMusicUrl,

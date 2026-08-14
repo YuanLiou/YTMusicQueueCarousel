@@ -22,6 +22,14 @@
     artist: ".byline",
     image: "img"
   });
+  const PLAY_TARGET_SELECTOR = [
+    "ytmusic-play-button-renderer",
+    "#play-button",
+    "button[aria-label*='播放']",
+    "button[aria-label*='Play']",
+    "[role='button'][aria-label*='播放']",
+    "[role='button'][aria-label*='Play']"
+  ].join(", ");
   const CURRENT_PLAY_STATES = new Set(["loading", "paused", "playing"]);
   const PAGE_QUEUE_REQUEST_EVENT = "ytm-cover-flow:request-queue-data";
   const PAGE_QUEUE_RESPONSE_EVENT = "ytm-cover-flow:queue-data";
@@ -37,7 +45,11 @@
   let bootObserver = null;
   let playerBar = null;
   let playerBarObserver = null;
+  let queueObserver = null;
+  let observedQueueContents = null;
+  let currentTrackSyncTimer = 0;
   let scheduledFrame = 0;
+  let syncFrame = 0;
   let queueSnapshot = core.createQueueSnapshot([]);
   let queueRows = new Map();
   let selectedPosition = -1;
@@ -230,6 +242,42 @@
           display: none;
         }
 
+        .play-button {
+          align-items: center;
+          background: rgba(0, 0, 0, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.72);
+          border-radius: 50%;
+          box-sizing: border-box;
+          color: #fff;
+          display: flex;
+          height: min(23%, 76px);
+          justify-content: center;
+          left: 50%;
+          opacity: 0;
+          padding: 0;
+          pointer-events: none;
+          position: absolute;
+          top: 50%;
+          transform: translate(-50%, -50%) scale(0.92);
+          transition: opacity 130ms ease, transform 130ms ease;
+          width: min(23%, 76px);
+        }
+
+        .cover-card[aria-selected="true"]:hover .play-button,
+        .cover-card[aria-selected="true"]:focus-visible .play-button {
+          opacity: 1;
+          pointer-events: auto;
+          transform: translate(-50%, -50%) scale(1);
+        }
+
+        .play-button::before {
+          border-bottom: 10px solid transparent;
+          border-left: 15px solid currentColor;
+          border-top: 10px solid transparent;
+          content: "";
+          margin-left: 4px;
+        }
+
         .reflection-clip {
           height: 45%;
           left: 0;
@@ -377,9 +425,8 @@
   }
 
   function createCoverCard(item, index) {
-    const card = document.createElement("button");
+    const card = document.createElement("div");
     card.className = "cover-card";
-    card.type = "button";
     card.dataset.index = String(index);
     card.setAttribute("role", "option");
     card.setAttribute("aria-label", `選取 ${item.title}`);
@@ -398,6 +445,20 @@
     placeholder.className = "placeholder";
     placeholder.textContent = item.placeholder?.title || item.title;
     artwork.append(placeholder);
+
+    const playButton = document.createElement("button");
+    playButton.className = "play-button";
+    playButton.type = "button";
+    playButton.setAttribute("aria-label", `播放 ${item.title}`);
+    playButton.addEventListener("pointerdown", (event) => {
+      event.stopPropagation();
+    });
+    playButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      playSelectedTrack();
+    });
+    artwork.append(playButton);
 
     if (item.imageUrl) {
       const image = document.createElement("img");
@@ -499,6 +560,10 @@
       card.style.zIndex = String(layout.zIndex);
       card.style.transform = `translate3d(calc(-50% + ${layout.translateXPercent}%), -50%, ${layout.translateZ}px) rotateY(${layout.rotateY}deg) scale(${layout.scale})`;
       card.setAttribute("aria-selected", String(index === selectedIndex));
+      card.setAttribute(
+        "aria-label",
+        index === selectedIndex ? `播放 ${queueSnapshot.items[index].title}` : `選取 ${queueSnapshot.items[index].title}`
+      );
     }
 
     updateSelectedInfo(selectedIndex, immediateInfo);
@@ -563,6 +628,88 @@
 
   function snapToNearestCover() {
     animateToIndex(core.settleIndex(selectedPosition, queueSnapshot.items.length));
+  }
+
+  function findLiveQueueRow(item) {
+    const knownRow = queueRows.get(item.sourceKey);
+    if (knownRow?.isConnected) {
+      return knownRow;
+    }
+
+    const contents = document.querySelector(QUEUE_SELECTORS.root)
+      ?.querySelector(QUEUE_SELECTORS.contents);
+    if (!contents) {
+      return null;
+    }
+
+    const candidate = requestPageQueueCandidates().find((nextCandidate) => (
+      core.isSameTrack(item, nextCandidate)
+    ));
+    const sourceIndex = Number(candidate?.sourceKey?.replace(/^queue-/, ""));
+    if (!Number.isInteger(sourceIndex)) {
+      return null;
+    }
+
+    const row = getActiveQueueRow(contents.children[sourceIndex]);
+    if (row) {
+      queueRows.set(item.sourceKey, row);
+    }
+    return row || null;
+  }
+
+  function playSelectedTrack() {
+    const selectedIndex = core.settleIndex(selectedPosition, queueSnapshot.items.length);
+    const item = queueSnapshot.items[selectedIndex];
+    if (!item) {
+      return;
+    }
+
+    const row = findLiveQueueRow(item);
+    const playTarget = row?.querySelector(PLAY_TARGET_SELECTOR);
+    playTarget?.click();
+  }
+
+  function syncCurrentTrack() {
+    if (!isOpen || queueSnapshot.items.length === 0) {
+      return;
+    }
+
+    const currentCandidate = requestPageQueueCandidates().find((candidate) => (
+      candidate.isCurrent === true
+    ));
+    const nextIndex = Number(currentCandidate?.sourceKey?.replace(/^queue-/, ""));
+
+    if (!Number.isInteger(nextIndex) || nextIndex < 0 || nextIndex >= queueSnapshot.items.length) {
+      return;
+    }
+
+    if (nextIndex !== queueSnapshot.currentIndex) {
+      queueSnapshot.currentIndex = nextIndex;
+      getOverlayHost().dataset.currentIndex = String(nextIndex);
+      animateToIndex(nextIndex);
+    }
+  }
+
+  function scheduleCurrentTrackSync() {
+    if (!isOpen || syncFrame) {
+      return;
+    }
+
+    syncFrame = requestAnimationFrame(() => {
+      syncFrame = 0;
+      syncCurrentTrack();
+    });
+  }
+
+  function startCurrentTrackSync() {
+    clearInterval(currentTrackSyncTimer);
+    currentTrackSyncTimer = window.setInterval(scheduleCurrentTrackSync, 250);
+    scheduleCurrentTrackSync();
+  }
+
+  function stopCurrentTrackSync() {
+    clearInterval(currentTrackSyncTimer);
+    currentTrackSyncTimer = 0;
   }
 
   function getActiveQueueRow(child) {
@@ -817,9 +964,16 @@
 
     const index = Number(card.dataset.index);
     const currentIndex = core.settleIndex(selectedPosition, queueSnapshot.items.length);
-    if (Number.isInteger(index) && index !== currentIndex) {
-      animateToIndex(index);
+    if (!Number.isInteger(index)) {
+      return;
     }
+
+    if (index !== currentIndex) {
+      animateToIndex(index);
+      return;
+    }
+
+    playSelectedTrack();
   }
 
   function handleWheel(event) {
@@ -859,9 +1013,16 @@
       queueSnapshot = captureQueueSnapshot();
       renderQueueShellState();
       updateOverlayInset();
+      bindQueueObserver();
+      startCurrentTrackSync();
       getOverlayParts().viewport?.focus({ preventScroll: true });
     } else {
       cancelAnimation();
+      stopCurrentTrackSync();
+      if (syncFrame) {
+        cancelAnimationFrame(syncFrame);
+        syncFrame = 0;
+      }
       clearTimeout(wheelTimer);
       clearTimeout(infoTimer);
       pointerState = null;
@@ -922,6 +1083,23 @@
     playerBarObserver.observe(playerBar, { childList: true, subtree: true });
   }
 
+  function bindQueueObserver() {
+    const root = document.querySelector(QUEUE_SELECTORS.root);
+    if (!root || root === observedQueueContents) {
+      return;
+    }
+
+    queueObserver?.disconnect();
+    queueObserver = new MutationObserver(scheduleCurrentTrackSync);
+    queueObserver.observe(root, {
+      attributes: true,
+      attributeFilter: ["play-button-state", "selected"],
+      childList: true,
+      subtree: true
+    });
+    observedQueueContents = root;
+  }
+
   function bindAppLayout(nextAppLayout) {
     if (appLayout === nextAppLayout) {
       return;
@@ -957,6 +1135,12 @@
     if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
       event.preventDefault();
       moveSelection(event.key === "ArrowLeft" ? -1 : 1);
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      playSelectedTrack();
     }
   }
 
@@ -981,4 +1165,5 @@
   });
 
   ensurePlayerButton();
+  bindQueueObserver();
 })();
