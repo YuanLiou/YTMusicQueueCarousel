@@ -155,15 +155,6 @@
           width: 100%;
         }
 
-        .viewport:focus-visible::after {
-          border: 2px solid rgba(255, 255, 255, 0.72);
-          border-radius: 12px;
-          content: "";
-          inset: 18px;
-          pointer-events: none;
-          position: absolute;
-        }
-
         .viewport.dragging {
           cursor: grabbing;
         }
