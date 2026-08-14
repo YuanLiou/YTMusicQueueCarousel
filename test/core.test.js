@@ -51,6 +51,24 @@ test("selects the largest usable image and excludes transparent GIF placeholders
   assert.equal(core.selectLargestImage([transparentGif]), null);
 });
 
+test("trusts known YouTube artwork hosts and upgrades verified Google image dimensions", () => {
+  const small = "https://yt3.googleusercontent.com/example=w120-h120-l90-rj";
+  const large = "https://yt3.googleusercontent.com/example=w1000-h1000-l90-rj";
+
+  assert.equal(core.isTrustedArtworkUrl(small), true);
+  assert.equal(core.isTrustedArtworkUrl("https://i.ytimg.com/vi/example/hqdefault.jpg"), true);
+  assert.equal(core.isTrustedArtworkUrl("https://example.com/cover.jpg"), false);
+  assert.equal(
+    core.upgradeGoogleArtworkUrl(small),
+    "https://yt3.googleusercontent.com/example=w544-h544-l90-rj"
+  );
+  assert.equal(core.upgradeGoogleArtworkUrl(large), large);
+  assert.equal(
+    core.upgradeGoogleArtworkUrl("https://i.ytimg.com/vi/example/hqdefault.jpg"),
+    "https://i.ytimg.com/vi/example/hqdefault.jpg"
+  );
+});
+
 test("parses width-based srcset candidates", () => {
   assert.deepEqual(core.parseSrcset(
     "https://example.com/60.jpg 60w, https://example.com/544.jpg 544w"
@@ -139,4 +157,51 @@ test("clamps and settles indexes at queue boundaries", () => {
   assert.equal(core.settleIndex(1.51, 4), 2);
   assert.equal(core.settleIndex(-30.2, 4), 0);
   assert.equal(core.settleIndex(300.8, 4), 3);
+});
+
+test("keeps continuous positions and discrete movement inside queue boundaries", () => {
+  assert.equal(core.clampPosition(-0.5, 4), 0);
+  assert.equal(core.clampPosition(1.25, 4), 1.25);
+  assert.equal(core.clampPosition(8, 4), 3);
+  assert.equal(core.clampPosition(0, 0), -1);
+  assert.equal(core.moveIndex(1, 1, 4), 2);
+  assert.equal(core.moveIndex(0, -1, 4), 0);
+  assert.equal(core.moveIndex(3, 1, 4), 3);
+});
+
+test("converts pointer and dominant wheel movement into continuous positions", () => {
+  assert.equal(core.positionFromPointer(2, 110, 220, 5), 1.5);
+  assert.equal(core.positionFromPointer(2, -220, 220, 5), 3);
+  assert.equal(core.positionFromPointer(0, 500, 220, 5), 0);
+  assert.equal(core.positionFromWheel(1, 20, 120, 240, 5), 1.5);
+  assert.equal(core.positionFromWheel(1, -240, 20, 240, 5), 0);
+  assert.equal(core.positionFromWheel(4, 0, 300, 240, 5), 4);
+});
+
+test("calculates a bounded rendering window around the selected position", () => {
+  assert.deepEqual(core.getVisibleRange(0, 20, 3), { start: 0, end: 3 });
+  assert.deepEqual(core.getVisibleRange(10.4, 20, 3), { start: 7, end: 13 });
+  assert.deepEqual(core.getVisibleRange(19, 20, 3), { start: 16, end: 19 });
+  assert.deepEqual(core.getVisibleRange(0, 0, 3), { start: -1, end: -1 });
+});
+
+test("derives symmetric Cover Flow transforms from relative position", () => {
+  const center = core.getCoverLayout(2, 2);
+  const left = core.getCoverLayout(1, 2);
+  const right = core.getCoverLayout(3, 2);
+
+  assert.deepEqual(center, {
+    distance: 0,
+    translateXPercent: 0,
+    translateZ: 0,
+    rotateY: 0,
+    scale: 1,
+    opacity: 1,
+    zIndex: 1000
+  });
+  assert.equal(left.translateXPercent, -right.translateXPercent);
+  assert.equal(left.rotateY, -right.rotateY);
+  assert.equal(left.translateZ, right.translateZ);
+  assert.equal(left.scale, right.scale);
+  assert.ok(center.zIndex > left.zIndex);
 });

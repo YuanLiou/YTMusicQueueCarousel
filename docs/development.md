@@ -18,6 +18,8 @@ Manifest 負責宣告 Manifest V3、`music.youtube.com` 的執行範圍、瀏覽
 
 內容腳本負責辨識 YouTube Music 播放列、注入播放列按鈕、在每次開啟時擷取佇列快照、建立覆蓋層、監聽互動，以及把明確的播放要求交回原生佇列項目。
 
+Chrome isolated content script 無法直接讀取 YouTube Polymer 元件的 `row.data`。需要元件資料時，使用一個最小化的 MAIN world bridge 唯讀擷取 queue row，經序列化 DOM event 傳回 isolated content script。Bridge 不操作播放器、不呼叫網路 API，也不保存資料；isolated 端仍須正規化文字並限制可接受的圖片 host。
+
 資料正規化與索引計算應與 DOM 操作分離，維持成可由 Node 內建測試工具測試的純函式。動畫狀態也應以單一選取索引為基準，避免 DOM 成為唯一狀態來源。
 
 ## 3. 已確認的頁面事實與整合策略
@@ -42,7 +44,7 @@ DOM selector 應分層處理。優先使用語意角色、可存取名稱、原�
 
 ## 5. 圖片處理
 
-優先從佇列項目的 `srcset` 選擇可取得的最大圖片，再退回目前 `currentSrc` 或 `src`。不要在沒有驗證的情況下硬改 YouTube 或 Google 圖片網址參數。
+優先從 MAIN world bridge 取得佇列元件提供的最大縮圖候選，再退回 DOM 的 `srcset`、`currentSrc` 或 `src`。2026-08-14 已驗證 `yt3.googleusercontent.com` 與 `lh3.googleusercontent.com` 的 `=w<width>-h<height>` 尺寸參數與元件候選一致；DOM fallback 可以只對這兩個 host 將尺寸提升至至少 544×544，不得改寫其他 host 或未知格式。
 
 封面顯示區固定為正方形。一般專輯封面使用 `object-fit: cover`；Video 的 16:9 縮圖也使用置中 `object-fit: cover` 裁切。圖片載入錯誤時切換至同尺寸 Placeholder，顯示歌曲名稱，不讓破圖圖示進入 Cover Flow。
 

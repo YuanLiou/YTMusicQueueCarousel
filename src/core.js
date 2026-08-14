@@ -38,6 +38,43 @@
     return !/^data:image\/gif(?:;|,)/i.test(url);
   }
 
+  function isTrustedArtworkUrl(value) {
+    if (!isUsableImageUrl(value)) {
+      return false;
+    }
+
+    try {
+      const url = new URL(cleanText(value));
+      return url.protocol === "https:"
+        && ["yt3.googleusercontent.com", "lh3.googleusercontent.com", "i.ytimg.com"]
+          .includes(url.hostname);
+    } catch {
+      return false;
+    }
+  }
+
+  function upgradeGoogleArtworkUrl(value, minimumSize = 544) {
+    const artworkUrl = cleanText(value);
+    if (!isTrustedArtworkUrl(artworkUrl)) {
+      return artworkUrl;
+    }
+
+    const url = new URL(artworkUrl);
+    if (!["yt3.googleusercontent.com", "lh3.googleusercontent.com"].includes(url.hostname)) {
+      return artworkUrl;
+    }
+
+    const safeMinimum = Number.isFinite(minimumSize)
+      ? Math.max(1, Math.trunc(minimumSize))
+      : 544;
+
+    return artworkUrl.replace(/=w(\d+)-h(\d+)(?=-|$)/, (match, width, height) => {
+      const upgradedWidth = Math.max(Number(width), safeMinimum);
+      const upgradedHeight = Math.max(Number(height), safeMinimum);
+      return `=w${upgradedWidth}-h${upgradedHeight}`;
+    });
+  }
+
   function normalizeImageCandidate(candidate) {
     const value = typeof candidate === "string" ? { url: candidate } : candidate;
 
@@ -184,6 +221,92 @@
     return clampIndex(Number.isFinite(position) ? Math.round(position) : 0, length);
   }
 
+  function clampPosition(position, length) {
+    if (!Number.isFinite(length) || length <= 0) {
+      return -1;
+    }
+
+    const value = Number.isFinite(position) ? position : 0;
+    return Math.min(Math.trunc(length) - 1, Math.max(0, value));
+  }
+
+  function moveIndex(index, delta, length) {
+    const current = clampIndex(index, length);
+    if (current < 0) {
+      return -1;
+    }
+
+    const offset = Number.isFinite(delta) ? Math.trunc(delta) : 0;
+    return clampIndex(current + offset, length);
+  }
+
+  function positionFromPointer(startPosition, deltaX, pixelsPerItem, length) {
+    const distance = Number.isFinite(deltaX) ? deltaX : 0;
+    const step = Number.isFinite(pixelsPerItem) && pixelsPerItem > 0
+      ? pixelsPerItem
+      : 1;
+
+    return clampPosition(startPosition - (distance / step), length);
+  }
+
+  function positionFromWheel(currentPosition, deltaX, deltaY, pixelsPerItem, length) {
+    const horizontal = Number.isFinite(deltaX) ? deltaX : 0;
+    const vertical = Number.isFinite(deltaY) ? deltaY : 0;
+    const dominantDelta = Math.abs(horizontal) > Math.abs(vertical) ? horizontal : vertical;
+    const step = Number.isFinite(pixelsPerItem) && pixelsPerItem > 0
+      ? pixelsPerItem
+      : 1;
+
+    return clampPosition(currentPosition + (dominantDelta / step), length);
+  }
+
+  function getVisibleRange(position, length, radius = 6) {
+    if (!Number.isFinite(length) || length <= 0) {
+      return { start: -1, end: -1 };
+    }
+
+    const center = settleIndex(position, length);
+    const safeRadius = Number.isFinite(radius) ? Math.max(0, Math.trunc(radius)) : 0;
+
+    return {
+      start: Math.max(0, center - safeRadius),
+      end: Math.min(Math.trunc(length) - 1, center + safeRadius)
+    };
+  }
+
+  function getCoverLayout(index, position) {
+    const safeIndex = Number.isFinite(index) ? index : 0;
+    const safePosition = Number.isFinite(position) ? position : 0;
+    const distance = safeIndex - safePosition;
+    const magnitude = Math.abs(distance);
+    const direction = Math.sign(distance);
+    const sideOffset = magnitude <= 1
+      ? magnitude * 78
+      : 78 + ((magnitude - 1) * 24);
+    const depth = magnitude === 0
+      ? 0
+      : magnitude <= 1
+        ? magnitude * -75
+      : -75 - ((magnitude - 1) * 28);
+    const scale = Math.max(
+      0.74,
+      1 - (Math.min(magnitude, 1) * 0.12) - (Math.max(0, magnitude - 1) * 0.025)
+    );
+    const opacity = magnitude <= 4
+      ? 1
+      : Math.max(0, 1 - ((magnitude - 4) * 0.5));
+
+    return {
+      distance,
+      translateXPercent: direction * sideOffset,
+      translateZ: depth,
+      rotateY: magnitude === 0 ? 0 : direction * Math.min(magnitude, 1) * -58,
+      scale,
+      opacity,
+      zIndex: 1000 - Math.round(magnitude * 10)
+    };
+  }
+
   function createQueueSnapshot(candidates) {
     const items = normalizeQueueCandidates(candidates);
     const currentIndex = findCurrentIndex(items);
@@ -229,19 +352,27 @@
     MESSAGE_TOGGLE,
     UNKNOWN_TRACK_TITLE,
     clampIndex,
+    clampPosition,
     cleanText,
     createQueueSnapshot,
     createToggleMessage,
     findCurrentIndex,
     findTrackIndex,
+    getCoverLayout,
+    getVisibleRange,
     isToggleMessage,
+    isTrustedArtworkUrl,
     isUsableImageUrl,
     isYouTubeMusicUrl,
+    moveIndex,
     nextVisibility,
     normalizeQueueCandidates,
     parseSrcset,
+    positionFromPointer,
+    positionFromWheel,
     selectLargestImage,
     settleIndex,
-    textFromRuns
+    textFromRuns,
+    upgradeGoogleArtworkUrl
   };
 });
