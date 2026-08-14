@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "YouTube Music Queue Cover Flow",
+  "name": "YouTube Music Queue Carousel",
   "version": "0.1.0",
-  "description": "Browse the current YouTube Music queue with a Cover Flow interface.",
+  "description": "Browse the current YouTube Music queue with a carousel interface.",
   "permissions": ["activeTab"],
   "host_permissions": ["https://music.youtube.com/*"],
   "action": {
-    "default_title": "切換 Cover Flow"
+    "default_title": "切換 YouTube Music Queue Carousel"
   },
   "background": {
     "service_worker": "src/background.js"

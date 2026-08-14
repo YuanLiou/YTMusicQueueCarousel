@@ -1,8 +1,8 @@
 {
-  "name": "youtube-music-queue-cover-flow",
+  "name": "youtube-music-queue-carousel",
   "version": "0.1.0",
   "private": true,
-  "description": "A Chrome Manifest V3 Cover Flow interface for the current YouTube Music queue.",
+  "description": "A Chrome Manifest V3 carousel interface for the current YouTube Music queue.",
   "scripts": {
     "test": "node --test"
   }

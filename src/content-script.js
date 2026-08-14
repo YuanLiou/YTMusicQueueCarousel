@@ -104,9 +104,9 @@
     const button = document.createElement("button");
     button.id = BUTTON_ID;
     button.type = "button";
-    button.setAttribute("aria-label", "切換 Cover Flow");
+    button.setAttribute("aria-label", "切換 YouTube Music Queue Carousel");
     button.setAttribute("aria-pressed", "false");
-    button.title = "Cover Flow";
+    button.title = "YouTube Music Queue Carousel";
     button.innerHTML = `
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path d="M3.5 7.5 8 5.7v12.6l-4.5-1.8v-9Zm6-2.3h5v13.6h-5V5.2Zm6.5.5 4.5 1.8v9L16 18.3V5.7Z"></path>
@@ -325,11 +325,11 @@
           }
         }
       </style>
-      <section class="stage" aria-label="Cover Flow" role="dialog">
+      <section class="stage" aria-label="YouTube Music Queue Carousel" role="dialog">
         <div
           class="viewport"
           role="listbox"
-          aria-label="播放佇列 Cover Flow"
+          aria-label="YouTube Music Queue Carousel 播放佇列"
           tabindex="0"
           style="--cover-size: min(30vw, 40vh, 360px)"
         >

@@ -1,6 +1,6 @@
 # 文件入口
 
-本目錄記錄 YouTube Music 播放佇列 Cover Flow 擴充套件的產品基準、開發方式與後續經驗。
+本目錄記錄 YouTube Music Queue Carousel 擴充套件的產品基準、開發方式與後續經驗。
 
 ## 文件權威順序
 

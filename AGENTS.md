@@ -1,4 +1,4 @@
-## YouTube Music Cover Flow 專案指引
+## YouTube Music Queue Carousel 專案指引
 
 開始任何規劃、實作、測試或 review 前，先完整閱讀 `docs/README.md`。該文件會引導 Agent 依工作需要讀取其餘文件。接著完整閱讀 `docs/progress.md`，先掌握目前階段、驗證狀態、已知限制與下一步，再繼續工作。
 
