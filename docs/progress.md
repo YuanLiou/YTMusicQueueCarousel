@@ -4,7 +4,7 @@
 
 ## 目前狀態
 
-MVP 第一、二階段已由 commit `b61d299` 完成，第三階段「Cover Flow 視覺、動畫與瀏覽輸入」已由 commit `1226559` 完成。方向鍵操作時 viewport 外圍的白色 focus box 已移除，保留焦點與鍵盤行為，並納入 commit `3b569e0`。第四階段「播放整合與狀態同步」已由 commit `ec438b1` 完成。seekbar 遮擋修正已完成實作與驗證，待使用者核准 commit。
+MVP 第一、二階段已由 commit `b61d299` 完成，第三階段「Cover Flow 視覺、動畫與瀏覽輸入」已由 commit `1226559` 完成。方向鍵操作時 viewport 外圍的白色 focus box 已移除，保留焦點與鍵盤行為，並納入 commit `3b569e0`。第四階段「播放整合與狀態同步」已由 commit `ec438b1` 完成。seekbar 遮擋修正已由 commit `b87e939` 完成並推送至 `origin/master`。
 
 已核准的第三階段 DoD：呈現中央與兩側透視封面、倒影、中央曲目文字及圖片 Placeholder；支援方向鍵、滾輪、觸控板橫向輸入、拖曳與側邊封面點擊；以連續位置驅動動畫並在邊界內吸附。中央封面、Play Button、`Enter` 播放與原生播放同步仍留在下一階段。
 
@@ -18,13 +18,15 @@ MVP 第一、二階段已由 commit `b61d299` 完成，第三階段「Cover Flow
 
 2026-08-14：seekbar 遮擋修正改以圖層處理。Carousel 黑背景仍延伸至播放器列頂端；開啟時原生播放器列由 `z-index: 4` 暫升至 `1000`，位於 Carousel 的 `z-index: 999` 上方，使 seekbar 與 handle 正常顯示及操作，同時不露出後方頁面。BrowserOS Neo 實際拖曳 seekbar 後播放進度由 0 秒變為 2:09；關閉 Carousel 後播放器列恢復 `z-index: 4`。
 
+2026-08-14：使用者提供的灰色標記已轉為 16、32、48、128px PNG，深灰底與標記置中。`manifest.json` 已在工具列 action 與擴充套件 icons 宣告四個尺寸；所有 PNG 尺寸與 JSON 格式驗證通過。使用者重新載入後，BrowserOS Neo 的 `chrome://extensions` 已實際顯示新圖示，擴充套件維持啟用。
+
 ## 已知限制
 
 BrowserOS Neo 啟用內容阻擋擴充套件時，YouTube 的 `/generate_204`、`log_event`、`stats/qoe` 與 `ptracking` 請求會在 DevTools console 顯示 `ERR_BLOCKED_BY_CLIENT`；這是環境噪音，不是 Cover Flow 錯誤。
 
 ## 下一步
 
-seekbar 遮擋修正完成，等待 commit 核准。已離開 BrowserOS 瀏覽器環境，但 BrowserOS 與 BrowserOS Neo MCP 工具仍可用於實站驗證，不依賴其瀏覽器視窗或其工作區。開始下一階段前，依 `docs/rules.md` 另提 Definition of Done 並取得核准。
+圖示更新已完成，等待使用者核准 commit。已離開 BrowserOS 瀏覽器環境，但 BrowserOS 與 BrowserOS Neo MCP 工具仍可用於實站驗證，不依賴其瀏覽器視窗或其工作區。開始下一階段前，依 `docs/rules.md` 另提 Definition of Done 並取得核准。
 
 ## 開發紀錄
 
@@ -53,3 +55,7 @@ seekbar 遮擋修正完成，等待 commit 核准。已離開 BrowserOS 瀏覽�
 完成第四階段：中央封面懸浮時顯示可存取的播放按鈕，中央封面、播放按鈕與 `Enter` 都委派至原生 queue 播放控制；側邊選取仍只瀏覽。覆蓋層開啟期間使用 MAIN world queue bridge 同步原生目前曲目，避免 isolated content script 讀取 Polymer row data 與跨世界 MutationObserver 更新不穩定的限制。17 項 Unit Test、靜態檢查與 BrowserOS Neo 實站播放及同步驗證通過，待使用者核准完整 diff 與 commit 草稿。
 
 第四階段以 commit `ec438b1` 完成。完成 seekbar 遮擋修正：Carousel 黑背景維持覆蓋到播放器列頂端，開啟期間暫時提高原生播放器列圖層，讓其 seekbar 與 handle 顯示在最上層。17 項 Unit Test、靜態檢查、圖層命中測試、實際拖曳與關閉後圖層復原驗證通過，待使用者核准完整 diff 與 commit 草稿。
+
+seekbar 遮擋修正以 commit `b87e939` 完成並推送至 `origin/master`。首次非互動式 SSH push 沒有輸出且分支仍為 ahead；改以 TTY 重試相同指令後成功，已將驗證方式整理至 `docs/rules.md` 的 Git push Lessons Learned。
+
+使用者提供灰色標記截圖，完成四個標準擴充套件圖示尺寸與 manifest 宣告；圖示直接由原圖的標記與背景製作，不重繪圖樣。待使用者核准完整 diff 與 commit 草稿。

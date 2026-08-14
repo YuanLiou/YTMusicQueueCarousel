@@ -6,7 +6,19 @@
   "permissions": ["activeTab"],
   "host_permissions": ["https://music.youtube.com/*"],
   "action": {
-    "default_title": "切換 YouTube Music Queue Carousel"
+    "default_title": "切換 YouTube Music Queue Carousel",
+    "default_icon": {
+      "16": "assets/icons/icon-16.png",
+      "32": "assets/icons/icon-32.png",
+      "48": "assets/icons/icon-48.png",
+      "128": "assets/icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "32": "assets/icons/icon-32.png",
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
   },
   "background": {
     "service_worker": "src/background.js"

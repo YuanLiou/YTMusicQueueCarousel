@@ -36,6 +36,10 @@ Assisted-by: AGENT_NAME:MODEL_VERSION [TOOL1] [TOOL2]
 
 Commit 完成後，報告 commit hash、subject、實際檔案範圍與簽署驗證狀態。工作目錄中其他未追蹤或未提交檔案必須保留，不得順手納入、覆寫或刪除。
 
+## Git push Lessons Learned
+
+使用 SSH remote 執行 `git push` 後，不能只依工具執行結束或沒有錯誤輸出判定成功；必須再以 `git status -sb` 確認本地分支不再顯示 ahead。若非互動式 push 沒有輸出，且分支仍為 ahead，應以配置 TTY 的互動式終端重試相同的 `git push origin <branch>`。本專案最後以 TTY 執行 `git push origin master`，成功將 `b87e939` 推送至 `origin/master`。
+
 ## Findings 與 Lessons Learned
 
 可重現的頁面陷阱、selector 失效、圖片限制、效能問題與工具限制先記錄在 [`findings.md`](./findings.md)，包含條件、現象與驗證證據。
