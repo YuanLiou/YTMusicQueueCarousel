@@ -4,7 +4,7 @@
 
 ## 目前狀態
 
-MVP 第一、二階段已由 commit `b61d299` 完成，第三階段「Cover Flow 視覺、動畫與瀏覽輸入」已由 commit `1226559` 完成。方向鍵操作時 viewport 外圍的白色 focus box 已移除，保留焦點與鍵盤行為，並納入本次 commit。
+MVP 第一、二階段已由 commit `b61d299` 完成，第三階段「Cover Flow 視覺、動畫與瀏覽輸入」已由 commit `1226559` 完成。方向鍵操作時 viewport 外圍的白色 focus box 已移除，保留焦點與鍵盤行為，並納入 commit `3b569e0`。
 
 已核准的第三階段 DoD：呈現中央與兩側透視封面、倒影、中央曲目文字及圖片 Placeholder；支援方向鍵、滾輪、觸控板橫向輸入、拖曳與側邊封面點擊；以連續位置驅動動畫並在邊界內吸附。中央封面、Play Button、`Enter` 播放與原生播放同步仍留在下一階段。
 
@@ -20,7 +20,7 @@ BrowserOS Neo 啟用內容阻擋擴充套件時，YouTube 的 `/generate_204`、
 
 ## 下一步
 
-Focus box 視覺修正完成。開始下一階段前，依 `docs/rules.md` 另提 Definition of Done 並取得核准。
+Focus box 視覺修正完成。已離開 BrowserOS 瀏覽器環境，但 BrowserOS 與 BrowserOS Neo MCP 工具仍可用於實站驗證，不依賴其瀏覽器視窗或其工作區。開始下一階段前，依 `docs/rules.md` 另提 Definition of Done 並取得核准。
 
 ## 開發紀錄
 
@@ -41,3 +41,5 @@ Focus box 視覺修正完成。開始下一階段前，依 `docs/rules.md` 另�
 第三階段以 commit `1226559` 完成。使用者核准移除方向鍵操作時 viewport 外圍的白色 focus box；修正只移除視覺樣式，保留程式化焦點、方向鍵、`Esc` 與播放列按鈕的鍵盤焦點提示。
 
 完成 focus box 修正的 16 項 Unit Test、靜態檢查與 BrowserOS Neo 方向鍵實站驗證；完整 diff 與 commit 草稿獲得使用者核准。
+
+移除 `AGENTS.md` 的 BrowserOS 管理區塊。後續仍可使用 BrowserOS 與 BrowserOS Neo MCP 工具，但驗證不依賴 BrowserOS 瀏覽器視窗或其工作區。
