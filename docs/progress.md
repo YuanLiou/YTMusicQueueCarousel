@@ -4,11 +4,15 @@
 
 ## 目前狀態
 
-MVP 第一、二階段已由 commit `b61d299` 完成，第三階段「Cover Flow 視覺、動畫與瀏覽輸入」已由 commit `1226559` 完成。方向鍵操作時 viewport 外圍的白色 focus box 已移除，保留焦點與鍵盤行為，並納入 commit `3b569e0`。第四階段「播放整合與狀態同步」已由 commit `ec438b1` 完成。seekbar 遮擋修正已由 commit `b87e939` 完成並推送至 `origin/master`；擴充套件圖示更新已由 commit `92bd081` 完成並推送至 `origin/master`。
+MVP 第一、二階段已由 commit `b61d299` 完成，第三階段「Cover Flow 視覺、動畫與瀏覽輸入」已由 commit `1226559` 完成。方向鍵操作時 viewport 外圍的白色 focus box 已移除，保留焦點與鍵盤行為，並納入 commit `3b569e0`。第四階段「播放整合與狀態同步」已由 commit `ec438b1` 完成。seekbar 遮擋修正已由 commit `b87e939` 完成並推送至 `origin/master`；擴充套件圖示更新已由 commit `92bd081` 完成並推送至 `origin/master`。後續介面與播放控制優化已完成，工作目錄等待完整 diff 與 commit 草稿核准。
 
 已核准的第三階段 DoD：呈現中央與兩側透視封面、倒影、中央曲目文字及圖片 Placeholder；支援方向鍵、滾輪、觸控板橫向輸入、拖曳與側邊封面點擊；以連續位置驅動動畫並在邊界內吸附。中央封面、Play Button、`Enter` 播放與原生播放同步仍留在下一階段。
 
 ## 最新驗證
+
+2026-08-15：側邊 Cover 點擊精度改為依 Carousel transform 參數計算投影四邊形，取代互相重疊的矩形外框與 Chrome 3D target；新增 point-in-polygon Unit Test，`npm test` 共 19 項通過。BrowserOS Neo 先將原生播放器固定為暫停、中央索引固定為 12，再以實體座標驗證右側重疊區選到前方索引 13、右側外緣選到索引 14、左側重疊區選到前方索引 11、左側外緣選到索引 9。原生曲目全程維持 `Smile in your face` 且保持暫停，瀏覽沒有觸發播放。
+
+2026-08-14：播放控制與開啟體驗優化後，`npm test` 共 18 項通過，四個 JavaScript 檔案通過 `node --check`，`manifest.json` JSON 解析與 `git diff --check` 通過。BrowserOS Neo 重新載入擴充套件後，實際確認左上角單色 YouTube Music Logo、Carousel 黑色舞台、原生播放佇列在開啟時為 `display: none`、關閉後顯示還原。中央播放控制在原生歌曲播放後由「播放」變為「暫停」，點擊後原生播放器同步變為暫停且控制回到「播放」。使用者兩次手動驗證發現側邊封面點擊無法置中；事件紀錄確認 Chrome 將 3D 旋轉封面的可見位置命中為 `.flow` 背景。改以 click 座標與可見 Cover 實際範圍判定後，BrowserOS Neo 重新整理頁面並以實體座標點擊右側 `お化けひまわり`，中央索引從 12 移至 13；再點擊左側 `Smile in your face`，索引從 13 回到 12。原生播放器全程維持 `Smile in your face`，沒有因瀏覽切歌。Hover 按鈕維持深色背景；點擊後 `is-activated` 狀態的 transform 實際進入縮放中間值，再回彈至原尺寸。
 
 2026-08-14：第三階段新增 Cover Flow 佈局、連續位置、可見範圍、拖曳、滾輪及可信圖片 URL 測試；`npm test` 共 16 項通過，四個 JavaScript 檔案通過 `node --check`，`git diff --check` 通過。BrowserOS Neo 已確認 33 首快照、目前曲目置中、側邊透視、中央文字、方向鍵、wheel、拖曳、側邊選取、起點／終點邊界、`Esc` 與「沒有曲目」空狀態，且瀏覽未切換播放。實站發現 isolated content script 造成前段只載入 120×120、後段透明 GIF 退回 Placeholder；MAIN world queue bridge 修正後，索引 0、20、32 與所有可見卡片均實際解碼為 544×544 且無 image failure。重新載入磁碟版本後，索引 0、20、32 的獨立倒影均有實際尺寸且畫面可見；插入非歌曲佇列節點後仍維持 33 首、前七首順序及封面對應正確。`chrome://extensions` 沒有記錄擴充套件錯誤。DevTools console 只有 YouTube 遙測與播放統計請求的 `ERR_BLOCKED_BY_CLIENT`，沒有 Cover Flow 未處理錯誤。
 
@@ -26,7 +30,7 @@ BrowserOS Neo 啟用內容阻擋擴充套件時，YouTube 的 `/generate_204`、
 
 ## 下一步
 
-目前沒有已排定的下一階段。已離開 BrowserOS 瀏覽器環境，但 BrowserOS 與 BrowserOS Neo MCP 工具仍可用於實站驗證，不依賴其瀏覽器視窗或其工作區。開始下一階段前，依 `docs/rules.md` 另提 Definition of Done 並取得核准。
+檢視本次完整 diff 與 draft commit message；取得使用者明確核准後，僅 stage `src/core.js`、`src/content-script.js`、`src/page-bridge.js`、`test/core.test.js`、`docs/spec.md`、`docs/findings.md` 與本檔案。
 
 ## 開發紀錄
 
@@ -59,3 +63,9 @@ BrowserOS Neo 啟用內容阻擋擴充套件時，YouTube 的 `/generate_204`、
 seekbar 遮擋修正以 commit `b87e939` 完成並推送至 `origin/master`。首次非互動式 SSH push 沒有輸出且分支仍為 ahead；改以 TTY 重試相同指令後成功，已將驗證方式整理至 `docs/rules.md` 的 Git push Lessons Learned。
 
 使用者提供灰色標記截圖，完成四個標準擴充套件圖示尺寸與 manifest 宣告；圖示直接由原圖的標記與背景製作，不重繪圖樣。以 commit `92bd081` 完成並推送至 `origin/master`。
+
+使用者核准播放控制與開啟體驗優化 DoD。完成目前播放曲目的暫停圖示與原生暫停委派、點擊後縮小回彈、任一封面僅置中、原生播放佇列開啟時隱藏與關閉後還原、快速淡入，以及左上角單色 YouTube Music Logo；同步更新產品規格。使用者回報側邊封面點擊失敗與 Hover 紅色過強後，移除紅色 Hover，並依實體事件紀錄修正 viewport pointer capture 與 3D Cover 命中判定。18 項 Unit Test、靜態檢查與 BrowserOS Neo 實站驗證結果已記於「最新驗證」，等待完整 diff 與 commit 草稿核准。
+
+### 2026-08-15
+
+使用者回報側邊 Cover 的矩形命中在邊緣容易選到後方項目。改以 Carousel transform 參數投影可見四邊形，重疊區依 z-index 選擇前方 Cover，實體點擊不再退回 Chrome 的 3D target。19 項 Unit Test、左右重疊區與外緣實站驗證通過，等待完整 diff 與 commit 草稿核准。

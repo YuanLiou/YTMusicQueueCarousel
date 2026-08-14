@@ -11,6 +11,7 @@
   const APP_LAYOUT_SELECTOR = "ytmusic-app-layout#layout";
   const PLAYER_BAR_SELECTOR = "ytmusic-player-bar";
   const PLAYER_BAR_ACTIVE_CLASS = "ytm-cover-flow-active";
+  const NATIVE_QUEUE_HIDDEN_CLASS = "ytm-cover-flow-queue-hidden";
   const VOLUME_SELECTOR = "#right-controls #volume-slider";
   const PLAYER_BAR_MIN_HEIGHT = 72;
   const QUEUE_SELECTORS = Object.freeze({
@@ -63,6 +64,7 @@
   let pendingInfoIndex = -2;
   let pointerState = null;
   let suppressClick = false;
+  let overlayFadeFrame = 0;
 
   function ensureDocumentStyles() {
     if (document.getElementById(STYLE_ID)) {
@@ -113,6 +115,11 @@
       ${PLAYER_BAR_SELECTOR}.${PLAYER_BAR_ACTIVE_CLASS} {
         z-index: 1000 !important;
       }
+
+      ytmusic-player-queue#queue.${NATIVE_QUEUE_HIDDEN_CLASS},
+      ytmusic-player-queue.${NATIVE_QUEUE_HIDDEN_CLASS} {
+        display: none !important;
+      }
     `;
     document.head.append(style);
   }
@@ -157,10 +164,52 @@
           box-sizing: border-box;
           color: #fff;
           height: 100%;
+          opacity: 0;
           overflow: hidden;
           position: relative;
           touch-action: none;
+          transition: opacity 150ms ease-out;
           width: 100%;
+        }
+
+        :host([data-visible="true"]) .stage {
+          opacity: 1;
+        }
+
+        .brand {
+          align-items: center;
+          display: inline-flex;
+          gap: 9px;
+          left: clamp(18px, 2.6vw, 42px);
+          pointer-events: none;
+          position: absolute;
+          top: clamp(18px, 2.8vw, 42px);
+          z-index: 1100;
+        }
+
+        .brand-mark {
+          align-items: center;
+          background: rgba(255, 255, 255, 0.94);
+          border-radius: 50%;
+          display: inline-flex;
+          height: 32px;
+          justify-content: center;
+          width: 32px;
+        }
+
+        .brand-mark::before {
+          border-bottom: 7px solid transparent;
+          border-left: 11px solid #000;
+          border-top: 7px solid transparent;
+          content: "";
+          margin-left: 3px;
+        }
+
+        .brand-name {
+          color: #fff;
+          font-size: 16px;
+          font-weight: 700;
+          letter-spacing: -0.02em;
         }
 
         .viewport {
@@ -249,10 +298,11 @@
 
         .play-button {
           align-items: center;
-          background: rgba(0, 0, 0, 0.6);
+          background: rgba(0, 0, 0, 0.72);
           border: 1px solid rgba(255, 255, 255, 0.72);
           border-radius: 50%;
           box-sizing: border-box;
+          box-shadow: 0 5px 18px rgba(0, 0, 0, 0.4);
           color: #fff;
           display: flex;
           height: min(23%, 76px);
@@ -264,7 +314,7 @@
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%) scale(0.92);
-          transition: opacity 130ms ease, transform 130ms ease;
+          transition: background-color 120ms ease, box-shadow 120ms ease, opacity 130ms ease, transform 130ms ease;
           width: min(23%, 76px);
         }
 
@@ -275,12 +325,51 @@
           transform: translate(-50%, -50%) scale(1);
         }
 
+        .play-button:hover {
+          background: rgba(0, 0, 0, 0.82);
+          box-shadow: 0 7px 22px rgba(0, 0, 0, 0.52);
+        }
+
+        .play-button:active,
+        .play-button.is-pressed {
+          background: rgba(0, 0, 0, 0.88);
+          box-shadow: 0 2px 7px rgba(0, 0, 0, 0.58), inset 0 2px 5px rgba(0, 0, 0, 0.4);
+          transform: translate(-50%, -50%) scale(0.76);
+        }
+
+        .play-button.is-activated {
+          animation: play-button-activation 280ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        @keyframes play-button-activation {
+          0% {
+            transform: translate(-50%, -50%) scale(1);
+          }
+          34% {
+            transform: translate(-50%, -50%) scale(0.68);
+          }
+          68% {
+            transform: translate(-50%, -50%) scale(1.12);
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1);
+          }
+        }
+
         .play-button::before {
           border-bottom: 10px solid transparent;
           border-left: 15px solid currentColor;
           border-top: 10px solid transparent;
           content: "";
           margin-left: 4px;
+        }
+
+        .play-button[data-action="pause"]::before {
+          background: linear-gradient(to right, currentColor 0 5px, transparent 5px 10px, currentColor 10px 15px);
+          border: 0;
+          height: 20px;
+          margin-left: 0;
+          width: 15px;
         }
 
         .reflection-clip {
@@ -363,7 +452,9 @@
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .track-info {
+          .stage,
+          .track-info,
+          .play-button {
             transition-duration: 0ms;
           }
         }
@@ -379,6 +470,10 @@
         }
       </style>
       <section class="stage" aria-label="YouTube Music Queue Carousel" role="dialog">
+        <div class="brand" aria-label="YouTube Music">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-name" aria-hidden="true">YouTube Music</span>
+        </div>
         <div
           class="viewport"
           role="listbox"
@@ -429,6 +524,25 @@
     };
   }
 
+  function getNativeQueue() {
+    return document.querySelector(QUEUE_SELECTORS.root);
+  }
+
+  function setNativeQueueVisibility(hidden) {
+    getNativeQueue()?.classList.toggle(NATIVE_QUEUE_HIDDEN_CLASS, hidden);
+  }
+
+  function updatePlayButton(playButton, index) {
+    const item = queueSnapshot.items[index];
+    if (!playButton || !item) {
+      return;
+    }
+
+    const action = core.getPlaybackAction(queueSnapshot.items, index);
+    playButton.dataset.action = action;
+    playButton.setAttribute("aria-label", `${action === "pause" ? "暫停" : "播放"} ${item.title}`);
+  }
+
   function createCoverCard(item, index) {
     const card = document.createElement("div");
     card.className = "cover-card";
@@ -454,14 +568,24 @@
     const playButton = document.createElement("button");
     playButton.className = "play-button";
     playButton.type = "button";
-    playButton.setAttribute("aria-label", `播放 ${item.title}`);
+    updatePlayButton(playButton, index);
     playButton.addEventListener("pointerdown", (event) => {
       event.stopPropagation();
+      playButton.classList.add("is-pressed");
     });
+    playButton.addEventListener("pointerup", () => playButton.classList.remove("is-pressed"));
+    playButton.addEventListener("pointercancel", () => playButton.classList.remove("is-pressed"));
+    playButton.addEventListener("pointerleave", () => playButton.classList.remove("is-pressed"));
     playButton.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
+      playButton.classList.remove("is-activated");
+      void playButton.offsetWidth;
+      playButton.classList.add("is-activated");
       playSelectedTrack();
+    });
+    playButton.addEventListener("animationend", () => {
+      playButton.classList.remove("is-activated");
     });
     artwork.append(playButton);
 
@@ -567,8 +691,11 @@
       card.setAttribute("aria-selected", String(index === selectedIndex));
       card.setAttribute(
         "aria-label",
-        index === selectedIndex ? `播放 ${queueSnapshot.items[index].title}` : `選取 ${queueSnapshot.items[index].title}`
+        index === selectedIndex
+          ? `目前置中的 ${queueSnapshot.items[index].title}`
+          : `置中 ${queueSnapshot.items[index].title}`
       );
+      updatePlayButton(card.querySelector(".play-button"), index);
     }
 
     updateSelectedInfo(selectedIndex, immediateInfo);
@@ -641,7 +768,7 @@
       return knownRow;
     }
 
-    const contents = document.querySelector(QUEUE_SELECTORS.root)
+    const contents = getNativeQueue()
       ?.querySelector(QUEUE_SELECTORS.contents);
     if (!contents) {
       return null;
@@ -669,6 +796,14 @@
       return;
     }
 
+    if (core.getPlaybackAction(queueSnapshot.items, selectedIndex) === "pause") {
+      const nativeToggle = playerBar?.querySelector("#play-pause-button");
+      if (nativeToggle) {
+        nativeToggle.click();
+        return;
+      }
+    }
+
     const row = findLiveQueueRow(item);
     const playTarget = row?.querySelector(PLAY_TARGET_SELECTOR);
     playTarget?.click();
@@ -688,10 +823,21 @@
       return;
     }
 
-    if (nextIndex !== queueSnapshot.currentIndex) {
+    const wasPlaying = queueSnapshot.items[nextIndex]?.isPlaying === true;
+    const isPlaying = currentCandidate.isPlaying === true;
+    const indexChanged = nextIndex !== queueSnapshot.currentIndex;
+
+    for (let index = 0; index < queueSnapshot.items.length; index += 1) {
+      queueSnapshot.items[index].isCurrent = index === nextIndex;
+      queueSnapshot.items[index].isPlaying = index === nextIndex && isPlaying;
+    }
+
+    if (indexChanged) {
       queueSnapshot.currentIndex = nextIndex;
       getOverlayHost().dataset.currentIndex = String(nextIndex);
       animateToIndex(nextIndex);
+    } else if (wasPlaying !== isPlaying) {
+      renderSelectedPosition();
     }
   }
 
@@ -822,12 +968,13 @@
       isVideo: isVideoRow(row),
       isCurrent: data.selected === true
         || row.hasAttribute("selected")
-        || CURRENT_PLAY_STATES.has(playState)
+        || CURRENT_PLAY_STATES.has(playState),
+      isPlaying: playState === "playing"
     };
   }
 
   function captureQueueSnapshot() {
-    const root = document.querySelector(QUEUE_SELECTORS.root);
+    const root = getNativeQueue();
     const contents = root?.querySelector(QUEUE_SELECTORS.contents);
     const nextRows = new Map();
     const pageCandidates = requestPageQueueCandidates();
@@ -864,7 +1011,8 @@
             ...(pageCandidate.imageCandidates || []),
             ...(domCandidate.imageCandidates || [])
           ],
-          isCurrent: pageCandidate.isCurrent === true || domCandidate.isCurrent === true
+          isCurrent: pageCandidate.isCurrent === true || domCandidate.isCurrent === true,
+          isPlaying: pageCandidate.isPlaying === true || domCandidate.isPlaying === true
         };
       })
       .filter(Boolean);
@@ -914,8 +1062,6 @@
       startPosition: selectedPosition,
       startX: event.clientX
     };
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-    event.currentTarget.classList.add("dragging");
   }
 
   function handlePointerMove(event) {
@@ -925,6 +1071,10 @@
 
     const deltaX = event.clientX - pointerState.startX;
     if (Math.abs(deltaX) >= DRAG_THRESHOLD) {
+      if (!pointerState.moved) {
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+        event.currentTarget.classList.add("dragging");
+      }
       pointerState.moved = true;
     }
 
@@ -955,6 +1105,85 @@
     snapToNearestCover();
   }
 
+  function getProjectedCoverPolygon(card) {
+    const { viewport } = getOverlayParts();
+    const index = Number(card.dataset.index);
+    if (!viewport || !Number.isInteger(index)) {
+      return null;
+    }
+
+    const viewportStyle = getComputedStyle(viewport);
+    const viewportRect = viewport.getBoundingClientRect();
+    const perspectiveOrigin = viewportStyle.perspectiveOrigin.split(/\s+/).map(Number.parseFloat);
+    const perspectiveDistance = Number.parseFloat(viewportStyle.perspective);
+    const originX = card.offsetWidth / 2;
+    const originY = card.offsetHeight / 2;
+    const perspectiveX = viewportRect.left
+      + (Number.isFinite(perspectiveOrigin[0]) ? perspectiveOrigin[0] : viewportRect.width / 2);
+    const perspectiveY = viewportRect.top
+      + (Number.isFinite(perspectiveOrigin[1]) ? perspectiveOrigin[1] : viewportRect.height / 2);
+
+    if (!Number.isFinite(perspectiveDistance) || perspectiveDistance <= 0) {
+      return null;
+    }
+
+    const layout = core.getCoverLayout(index, selectedPosition);
+    const angle = layout.rotateY * (Math.PI / 180);
+    const cosine = Math.cos(angle);
+    const sine = Math.sin(angle);
+    const translateX = ((layout.translateXPercent / 100) - 0.5) * card.offsetWidth;
+    const translateY = -0.5 * card.offsetHeight;
+
+    return [
+      [0, 0],
+      [card.offsetWidth, 0],
+      [card.offsetWidth, card.offsetHeight],
+      [0, card.offsetHeight]
+    ].map(([x, y]) => {
+      const relativeX = (x - originX) * layout.scale;
+      const relativeY = (y - originY) * layout.scale;
+      const transformedX = translateX + (relativeX * cosine);
+      const transformedY = translateY + relativeY;
+      const transformedZ = layout.translateZ - (relativeX * sine);
+      const worldX = viewportRect.left + card.offsetLeft + originX + transformedX;
+      const worldY = viewportRect.top + card.offsetTop + originY + transformedY;
+      const perspectiveScale = perspectiveDistance / (perspectiveDistance - transformedZ);
+
+      return {
+        x: perspectiveX + ((worldX - perspectiveX) * perspectiveScale),
+        y: perspectiveY + ((worldY - perspectiveY) * perspectiveScale)
+      };
+    });
+  }
+
+  function findCoverAtPoint(clientX, clientY) {
+    if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) {
+      return null;
+    }
+
+    let frontCard = null;
+    let frontZIndex = Number.NEGATIVE_INFINITY;
+
+    for (const card of coverCards.values()) {
+      if (card.style.pointerEvents === "none") {
+        continue;
+      }
+
+      const polygon = getProjectedCoverPolygon(card);
+      if (!polygon || !core.isPointInPolygon({ x: clientX, y: clientY }, polygon)) {
+        continue;
+      }
+
+      const zIndex = core.getCoverLayout(Number(card.dataset.index), selectedPosition).zIndex;
+      if (zIndex > frontZIndex) {
+        frontCard = card;
+        frontZIndex = zIndex;
+      }
+    }
+
+    return frontCard;
+  }
+
   function handleCoverClick(event) {
     if (suppressClick) {
       suppressClick = false;
@@ -962,23 +1191,22 @@
       return;
     }
 
-    const card = event.target.closest?.(".cover-card");
+    const pathCard = event.composedPath().find((target) => (
+        target instanceof Element && target.classList.contains("cover-card")
+      ));
+    const card = event.isTrusted
+      ? findCoverAtPoint(event.clientX, event.clientY)
+      : pathCard || findCoverAtPoint(event.clientX, event.clientY);
     if (!card) {
       return;
     }
 
     const index = Number(card.dataset.index);
-    const currentIndex = core.settleIndex(selectedPosition, queueSnapshot.items.length);
     if (!Number.isInteger(index)) {
       return;
     }
 
-    if (index !== currentIndex) {
-      animateToIndex(index);
-      return;
-    }
-
-    playSelectedTrack();
+    animateToIndex(index);
   }
 
   function handleWheel(event) {
@@ -1009,11 +1237,17 @@
     isOpen = core.nextVisibility(isOpen, requested);
 
     const host = getOverlayHost();
+    if (overlayFadeFrame) {
+      cancelAnimationFrame(overlayFadeFrame);
+      overlayFadeFrame = 0;
+    }
     host.hidden = !isOpen;
     host.style.display = isOpen ? "block" : "none";
     host.style.pointerEvents = isOpen ? "auto" : "none";
+    host.dataset.visible = "false";
     getButton()?.setAttribute("aria-pressed", String(isOpen));
     playerBar?.classList.toggle(PLAYER_BAR_ACTIVE_CLASS, isOpen);
+    setNativeQueueVisibility(isOpen);
 
     if (isOpen) {
       queueSnapshot = captureQueueSnapshot();
@@ -1021,6 +1255,12 @@
       updateOverlayInset();
       bindQueueObserver();
       startCurrentTrackSync();
+      overlayFadeFrame = requestAnimationFrame(() => {
+        overlayFadeFrame = 0;
+        if (isOpen) {
+          host.dataset.visible = "true";
+        }
+      });
       getOverlayParts().viewport?.focus({ preventScroll: true });
     } else {
       cancelAnimation();
@@ -1092,7 +1332,7 @@
   }
 
   function bindQueueObserver() {
-    const root = document.querySelector(QUEUE_SELECTORS.root);
+    const root = getNativeQueue();
     if (!root || root === observedQueueContents) {
       return;
     }
@@ -1106,6 +1346,7 @@
       subtree: true
     });
     observedQueueContents = root;
+    setNativeQueueVisibility(isOpen);
   }
 
   function bindAppLayout(nextAppLayout) {

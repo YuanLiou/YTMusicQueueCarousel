@@ -167,7 +167,8 @@
         imageUrl,
         placeholder: imageUrl ? null : { title },
         isVideo: candidate.isVideo === true,
-        isCurrent: candidate.isCurrent === true
+        isCurrent: candidate.isCurrent === true,
+        isPlaying: candidate.isPlaying === true
       });
     }
 
@@ -332,6 +333,55 @@
     };
   }
 
+  function isPointInPolygon(point, polygon) {
+    if (
+      !point
+      || !Number.isFinite(point.x)
+      || !Number.isFinite(point.y)
+      || !Array.isArray(polygon)
+      || polygon.length < 3
+    ) {
+      return false;
+    }
+
+    let inside = false;
+
+    for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
+      const start = polygon[previous];
+      const end = polygon[index];
+      if (
+        !Number.isFinite(start?.x)
+        || !Number.isFinite(start?.y)
+        || !Number.isFinite(end?.x)
+        || !Number.isFinite(end?.y)
+      ) {
+        return false;
+      }
+
+      const edgeX = end.x - start.x;
+      const edgeY = end.y - start.y;
+      const pointX = point.x - start.x;
+      const pointY = point.y - start.y;
+      const cross = (edgeX * pointY) - (edgeY * pointX);
+      const edgeLength = Math.hypot(edgeX, edgeY);
+      const dot = (pointX * edgeX) + (pointY * edgeY);
+      if (Math.abs(cross) <= edgeLength * 0.01 && dot >= 0 && dot <= edgeLength ** 2) {
+        return true;
+      }
+
+      const crossesRay = (start.y > point.y) !== (end.y > point.y);
+      if (crossesRay) {
+        const intersectionX = start.x
+          + (((point.y - start.y) * (end.x - start.x)) / (end.y - start.y));
+        if (point.x < intersectionX) {
+          inside = !inside;
+        }
+      }
+    }
+
+    return inside;
+  }
+
   function createQueueSnapshot(candidates) {
     const items = normalizeQueueCandidates(candidates);
     const currentIndex = findCurrentIndex(items);
@@ -341,6 +391,13 @@
       currentIndex,
       selectedIndex: currentIndex
     };
+  }
+
+  function getPlaybackAction(items, selectedIndex) {
+    const selected = clampIndex(selectedIndex, Array.isArray(items) ? items.length : 0);
+    const item = selected >= 0 ? items[selected] : null;
+
+    return item?.isCurrent === true && item.isPlaying === true ? "pause" : "play";
   }
 
   function isYouTubeMusicUrl(value) {
@@ -384,7 +441,9 @@
     findCurrentIndex,
     findTrackIndex,
     getCoverLayout,
+    getPlaybackAction,
     getVisibleRange,
+    isPointInPolygon,
     isToggleMessage,
     isSameTrack,
     isTrustedArtworkUrl,

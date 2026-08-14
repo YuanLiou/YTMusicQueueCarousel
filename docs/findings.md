@@ -51,3 +51,19 @@
 現象：viewport 的 `pointerdown` 會立即取得 pointer capture，後續 click 被重新導向拖曳層；程式直接呼叫按鈕 `.click()` 不會經過 pointer 流程，因此會產生錯誤的通過結果。
 
 結論：播放按鈕必須在 `pointerdown` 停止冒泡，避免 viewport 取得 capture，並保留自己的 click handler。播放按鈕驗證必須使用實際指標 hover 與點擊，不能只用程式化 `.click()`。
+
+## 2026-08-14：3D 透視封面的 click target 不可靠
+
+條件：Carousel viewport 在每次 `pointerdown` 時立即取得 pointer capture，使用者直接點擊中央以外的封面，沒有進行拖曳。
+
+現象：延後 pointer capture 後，使用者仍可穩定重現側邊封面點擊無反應。BrowserOS Neo 的實體座標事件紀錄顯示，`pointerdown`、`pointerup` 與 `click` 均有抵達 viewport，但 Chrome 將旋轉後封面的可見位置命中為 `.flow` 背景，事件路徑裡沒有 `.cover-card`。
+
+結論：viewport 仍只在移動距離超過拖曳門檻、確定開始拖曳時取得 pointer capture。實體點擊不得依賴 `event.target` 或 `event.composedPath()` 決定 Cover；應由 Carousel 自己的位移、旋轉、縮放、深度與 perspective 計算投影後的可見四邊形。
+
+## 2026-08-15：3D Cover 的矩形外框會讓重疊區誤選後方項目
+
+條件：改以 click 座標與 `getBoundingClientRect()` 判定側邊 Cover 後，點擊多張旋轉封面矩形外框的重疊區。
+
+現象：基本側邊點擊已能置中，但矩形包含旋轉後梯形以外的空白區，依中心距離選取時容易跳到視覺上位於後方的 Cover。
+
+結論：使用連續 `selectedPosition` 與 `getCoverLayout()` 的 transform 參數直接投影 Cover 四角，以 point-in-polygon 判斷真正命中項目；多個四邊形重疊時選擇 z-index 最高者。實體指標沒有命中任何四邊形時保持原選取，不退回 Chrome 的 3D target。BrowserOS Neo 固定播放器為暫停後，左右重疊區與外緣四種座標測試均選到預期索引。

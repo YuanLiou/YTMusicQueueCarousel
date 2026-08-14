@@ -138,6 +138,20 @@ test("centers the current track and falls back to the first available track", ()
   assert.equal(core.createQueueSnapshot([]).currentIndex, -1);
 });
 
+test("uses pause only for the selected track that is actively playing", () => {
+  const items = core.normalizeQueueCandidates([
+    { sourceKey: "queue-0", title: "第一首", isCurrent: true, isPlaying: true },
+    { sourceKey: "queue-1", title: "第二首" }
+  ]);
+
+  assert.equal(core.getPlaybackAction(items, 0), "pause");
+  assert.equal(core.getPlaybackAction(items, 1), "play");
+
+  items[0].isPlaying = false;
+  assert.equal(core.getPlaybackAction(items, 0), "play");
+  assert.equal(core.getPlaybackAction([], 0), "play");
+});
+
 test("finds a playing track by video id before title and artist", () => {
   const items = core.normalizeQueueCandidates([
     { sourceKey: "queue-0", videoId: "a", title: "同名", artist: "甲" },
@@ -223,4 +237,18 @@ test("derives symmetric Cover Flow transforms from relative position", () => {
   assert.equal(left.translateZ, right.translateZ);
   assert.equal(left.scale, right.scale);
   assert.ok(center.zIndex > left.zIndex);
+});
+
+test("detects points inside projected cover polygons without using bounding boxes", () => {
+  const trapezoid = [
+    { x: 30, y: 10 },
+    { x: 80, y: 20 },
+    { x: 80, y: 90 },
+    { x: 30, y: 100 }
+  ];
+
+  assert.equal(core.isPointInPolygon({ x: 55, y: 50 }, trapezoid), true);
+  assert.equal(core.isPointInPolygon({ x: 80, y: 50 }, trapezoid), true);
+  assert.equal(core.isPointInPolygon({ x: 20, y: 50 }, trapezoid), false);
+  assert.equal(core.isPointInPolygon({ x: 75, y: 12 }, trapezoid), false);
 });

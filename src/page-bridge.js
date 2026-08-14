@@ -65,7 +65,8 @@
         isVideo: isVideoRow(row),
         isCurrent: data.selected === true
           || row.hasAttribute("selected")
-          || CURRENT_PLAY_STATES.has(playState)
+          || CURRENT_PLAY_STATES.has(playState),
+        isPlaying: playState === "playing"
       };
     }).filter(Boolean);
   }
