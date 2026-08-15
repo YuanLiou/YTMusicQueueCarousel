@@ -486,10 +486,85 @@
     return !current;
   }
 
+  function selectViewportBottomCandidateIndex(candidates, viewportHeight) {
+    if (!Array.isArray(candidates) || !Number.isFinite(viewportHeight)) {
+      return -1;
+    }
+
+    let selectedIndex = -1;
+    let selectedDistance = Infinity;
+
+    candidates.forEach((candidate, index) => {
+      const width = Number(candidate?.width);
+      const height = Number(candidate?.height);
+      const bottom = Number(candidate?.bottom);
+      const hasLayout = candidate?.display !== "none"
+        && width > 0
+        && height > 0
+        && Number.isFinite(bottom);
+
+      if (!hasLayout) {
+        return;
+      }
+
+      const distance = Math.abs(viewportHeight - bottom);
+      if (distance < selectedDistance) {
+        selectedIndex = index;
+        selectedDistance = distance;
+      }
+    });
+
+    return selectedIndex;
+  }
+
+  function selectFirstSizedCandidateIndex(candidates) {
+    if (!Array.isArray(candidates)) {
+      return -1;
+    }
+
+    return candidates.findIndex((candidate) => (
+      candidate?.display !== "none"
+      && Number(candidate?.width) > 0
+      && Number(candidate?.height) > 0
+    ));
+  }
+
+  function calculateOverlayInsets(
+    playerBarRect,
+    progressBarRect,
+    fallbackHeight = 72,
+    fallbackProgressDepth = 16
+  ) {
+    const measuredHeight = Number(playerBarRect?.height);
+    const safeFallbackHeight = Number.isFinite(fallbackHeight) && fallbackHeight > 0
+      ? Math.round(fallbackHeight)
+      : 72;
+    const playerBarHeight = Number.isFinite(measuredHeight) && measuredHeight > 0
+      ? Math.round(measuredHeight)
+      : safeFallbackHeight;
+    const playerBarTop = Number(playerBarRect?.top);
+    const progressBarBottom = Number(progressBarRect?.bottom);
+    const safeFallbackProgressDepth = Number.isFinite(fallbackProgressDepth)
+      ? Math.max(0, Math.round(fallbackProgressDepth))
+      : 16;
+    const measuredProgressDepth = Number.isFinite(playerBarTop)
+      && Number.isFinite(progressBarBottom)
+      ? Math.ceil(progressBarBottom - playerBarTop)
+      : safeFallbackProgressDepth;
+    const progressDepth = Math.max(0, Math.min(playerBarHeight, measuredProgressDepth));
+
+    return {
+      hostBottom: playerBarHeight - progressDepth,
+      playerBarHeight,
+      progressDepth
+    };
+  }
+
   return {
     EMPTY_QUEUE_MESSAGE,
     MESSAGE_TOGGLE,
     UNKNOWN_TRACK_TITLE,
+    calculateOverlayInsets,
     clampIndex,
     clampPosition,
     cleanText,
@@ -516,7 +591,9 @@
     rawPositionFromWheel,
     responsiveOverscrollDistance,
     rubberBandPosition,
+    selectFirstSizedCandidateIndex,
     selectLargestImage,
+    selectViewportBottomCandidateIndex,
     settleIndex,
     textFromRuns,
     upgradeGoogleArtworkUrl

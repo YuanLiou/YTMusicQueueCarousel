@@ -13,7 +13,12 @@
   const PLAYER_BAR_ACTIVE_CLASS = "ytm-cover-flow-active";
   const NATIVE_QUEUE_HIDDEN_CLASS = "ytm-cover-flow-queue-hidden";
   const VOLUME_SELECTOR = "#right-controls #volume-slider";
+  const MOBILE_CONTROLS_SELECTOR = "#right-controls-mweb";
+  const DESKTOP_CONTROLS_SELECTOR = "#right-controls .right-controls-buttons";
+  const PLAYER_TOGGLE_SELECTOR = "#play-pause-button, #play-pause-button-mweb";
+  const PROGRESS_BAR_SELECTOR = "#progress-bar";
   const PLAYER_BAR_MIN_HEIGHT = 72;
+  const PROGRESS_BAR_BACKDROP_FALLBACK = 16;
   const QUEUE_SELECTORS = Object.freeze({
     root: "ytmusic-player-queue#queue, ytmusic-player-queue",
     contents: ":scope > #contents",
@@ -55,6 +60,7 @@
   let bootObserver = null;
   let playerBar = null;
   let playerBarObserver = null;
+  let layoutPlayerBar = null;
   let queueObserver = null;
   let observedQueueContents = null;
   let currentTrackSyncTimer = 0;
@@ -123,6 +129,8 @@
       }
 
       ${PLAYER_BAR_SELECTOR}.${PLAYER_BAR_ACTIVE_CLASS} {
+        opacity: 1 !important;
+        visibility: visible !important;
         z-index: 1000 !important;
       }
 
@@ -163,7 +171,9 @@
     host.hidden = true;
     host.style.display = "none";
     host.style.position = "fixed";
-    host.style.inset = "0 0 72px 0";
+    host.style.inset = `0 0 ${PLAYER_BAR_MIN_HEIGHT - PROGRESS_BAR_BACKDROP_FALLBACK}px 0`;
+    host.style.background = "#000";
+    host.style.overflow = "hidden";
     host.style.zIndex = "999";
     host.style.pointerEvents = "none";
 
@@ -171,22 +181,29 @@
     shadow.innerHTML = `
       <style>
         :host {
+          background: #000;
+          display: block;
           color-scheme: dark;
           font-family: Roboto, Arial, sans-serif;
+          overflow: hidden;
           user-select: none;
         }
 
         .stage {
           background: #000;
+          bottom: var(--ytm-cover-flow-progress-depth, 16px);
           box-sizing: border-box;
           color: #fff;
-          height: 100%;
+          height: auto;
+          left: 0;
           opacity: 0;
           overflow: hidden;
-          position: relative;
+          position: absolute;
+          right: 0;
           touch-action: none;
+          top: 0;
           transition: opacity 150ms ease-out;
-          width: 100%;
+          width: auto;
         }
 
         :host([data-visible="true"]) .stage {
@@ -483,8 +500,24 @@
         }
 
         @media (max-height: 620px) {
+          .brand-name {
+            display: none;
+          }
+
           .cover-card {
             top: 39%;
+          }
+
+          .play-button {
+            border-radius: 0;
+            border-width: 0;
+            box-shadow: none;
+            height: 100%;
+            width: 100%;
+          }
+
+          .play-button::before {
+            transform: scale(1.8);
           }
 
           .track-info {
@@ -948,7 +981,7 @@
     }
 
     if (core.getPlaybackAction(queueSnapshot.items, selectedIndex) === "pause") {
-      const nativeToggle = playerBar?.querySelector("#play-pause-button");
+      const nativeToggle = playerBar?.querySelector(PLAYER_TOGGLE_SELECTOR);
       if (nativeToggle) {
         nativeToggle.click();
         return;
@@ -1396,8 +1429,22 @@
 
   function updateOverlayInset() {
     const host = getOverlayHost();
-    const height = playerBar?.getBoundingClientRect().height || PLAYER_BAR_MIN_HEIGHT;
-    host.style.bottom = `${Math.max(PLAYER_BAR_MIN_HEIGHT, Math.round(height))}px`;
+    const playerBarRect = layoutPlayerBar?.getBoundingClientRect();
+    const progressBarRect = layoutPlayerBar
+      ?.querySelector(PROGRESS_BAR_SELECTOR)
+      ?.getBoundingClientRect();
+    const { hostBottom, progressDepth } = core.calculateOverlayInsets(
+      playerBarRect,
+      progressBarRect,
+      PLAYER_BAR_MIN_HEIGHT,
+      PROGRESS_BAR_BACKDROP_FALLBACK
+    );
+
+    host.style.bottom = `${hostBottom}px`;
+    host.style.setProperty(
+      "--ytm-cover-flow-progress-depth",
+      `${progressDepth}px`
+    );
   }
 
   function setOpen(requested) {
@@ -1413,7 +1460,7 @@
     host.style.pointerEvents = isOpen ? "auto" : "none";
     host.dataset.visible = "false";
     getButton()?.setAttribute("aria-pressed", String(isOpen));
-    playerBar?.classList.toggle(PLAYER_BAR_ACTIVE_CLASS, isOpen);
+    layoutPlayerBar?.classList.toggle(PLAYER_BAR_ACTIVE_CLASS, isOpen);
     setNativeQueueVisibility(isOpen);
 
     if (isOpen) {
@@ -1449,7 +1496,23 @@
       bindAppLayout(currentAppLayout);
     }
 
-    const currentPlayerBar = currentAppLayout?.querySelector(PLAYER_BAR_SELECTOR);
+    const playerBars = [...(currentAppLayout?.querySelectorAll(PLAYER_BAR_SELECTOR) || [])];
+    const layoutPlayerBarIndex = core.selectViewportBottomCandidateIndex(
+      playerBars.map((candidate) => {
+        const rect = candidate.getBoundingClientRect();
+        const style = getComputedStyle(candidate);
+        return {
+          bottom: rect.bottom,
+          display: style.display,
+          height: rect.height,
+          visibility: style.visibility,
+          width: rect.width
+        };
+      }),
+      window.innerHeight
+    );
+    const currentPlayerBar = playerBars[layoutPlayerBarIndex] || null;
+    bindLayoutPlayerBar(currentPlayerBar);
     if (!currentPlayerBar) {
       return;
     }
@@ -1457,8 +1520,27 @@
     bindPlayerBar(currentPlayerBar);
     ensureDocumentStyles();
 
-    const volume = currentPlayerBar.querySelector(VOLUME_SELECTOR);
-    if (!volume) {
+    const mounts = [
+      { element: currentPlayerBar.querySelector(VOLUME_SELECTOR), placement: "before" },
+      { element: currentPlayerBar.querySelector(MOBILE_CONTROLS_SELECTOR), placement: "prepend" },
+      { element: currentPlayerBar.querySelector(DESKTOP_CONTROLS_SELECTOR), placement: "prepend" }
+    ];
+    const mountIndex = core.selectFirstSizedCandidateIndex(mounts.map(({ element }) => {
+      if (!element) {
+        return null;
+      }
+
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return {
+        display: style.display,
+        height: rect.height,
+        visibility: style.visibility,
+        width: rect.width
+      };
+    }));
+    const mount = mounts[mountIndex];
+    if (!mount) {
       return;
     }
 
@@ -1467,8 +1549,14 @@
       button = createPlayerButton();
     }
 
-    if (button.parentElement !== volume.parentElement || button.nextElementSibling !== volume) {
-      volume.before(button);
+    if (mount.placement === "before") {
+      if (button.parentElement !== mount.element.parentElement
+        || button.nextElementSibling !== mount.element) {
+        mount.element.before(button);
+      }
+    } else if (button.parentElement !== mount.element
+      || button !== mount.element.firstElementChild) {
+      mount.element.prepend(button);
     }
 
     button.setAttribute("aria-pressed", String(isOpen));
@@ -1492,11 +1580,26 @@
     }
 
     playerBarObserver?.disconnect();
-    playerBar?.classList.remove(PLAYER_BAR_ACTIVE_CLASS);
     playerBar = nextPlayerBar;
-    playerBar.classList.toggle(PLAYER_BAR_ACTIVE_CLASS, isOpen);
     playerBarObserver = new MutationObserver(schedulePlayerButtonCheck);
     playerBarObserver.observe(playerBar, { childList: true, subtree: true });
+  }
+
+  function bindLayoutPlayerBar(nextPlayerBar) {
+    if (layoutPlayerBar === nextPlayerBar) {
+      return;
+    }
+
+    layoutPlayerBar?.classList.remove(PLAYER_BAR_ACTIVE_CLASS);
+    layoutPlayerBar = nextPlayerBar;
+
+    if (!layoutPlayerBar) {
+      updateOverlayInset();
+      return;
+    }
+
+    layoutPlayerBar.classList.toggle(PLAYER_BAR_ACTIVE_CLASS, isOpen);
+    updateOverlayInset();
   }
 
   function bindQueueObserver() {
@@ -1572,7 +1675,7 @@
   });
 
   document.addEventListener("keydown", handleKeydown, true);
-  window.addEventListener("resize", updateOverlayInset, { passive: true });
+  window.addEventListener("resize", schedulePlayerButtonCheck, { passive: true });
 
   bootObserver = new MutationObserver(schedulePlayerButtonCheck);
   bootObserver.observe(document.documentElement, { childList: true, subtree: true });

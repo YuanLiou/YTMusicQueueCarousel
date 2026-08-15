@@ -91,3 +91,25 @@
 現象：視窗縮小時位移像素沒有變少，相對於封面寬度的比例會快速增加，視覺上像是拉伸距離變得更遠。
 
 結論：滾輪、拖曳與鍵盤的最大位移應依同一套封面尺寸公式縮放，桌面尺寸保留固定上限；以純數值計算 viewport 對應的封面尺寸，避免在連續輸入期間讀取 DOM layout。
+
+## 2026-08-15：seekbar 跨出播放器列邊界時會露出頁面
+
+條件：Carousel host 的底邊依原生 `ytmusic-player-bar` 高度內縮，播放器列與 seekbar 為保持可操作而提高到 Carousel 之上；在特定視窗高度與播放器列布局下檢視畫面底部。
+
+現象：Carousel 舞台與播放器實色控制列之間會出現一條透明區帶，露出後方頁面縮圖。替播放器列根節點設定黑色背景後，使用者提供五張截圖確認問題仍存在。BrowserOS Neo 實測 host 底邊與播放器列頂邊皆為 922px，但 32px 高的 seekbar 從 907px 延伸至 939px，跨過兩者邊界；在部分響應式布局下，其透明合成區會顯示 host 範圍外的頁面內容。
+
+後續現象：把黑色 host 擴張到完整 viewport 後，部分視窗尺寸的 YouTube Music stacking context 會讓 host 蓋住整個播放器控制列，範圍過大。
+
+結論：不可只替播放器列上色，也不可讓 host 涵蓋完整 viewport。黑色 host 的底邊應由播放器列與 seekbar 的實測矩形計算，只延伸到 seekbar 跨界區的底緣；Carousel 舞台則在 host 內回縮相同深度，維持停在播放器列頂端。這能替透明 seekbar 提供黑色 backing layer，同時不讓 host 進入其餘播放器控制列。
+
+後續 Root Cause：在 609×882 的窄視窗中，頁面同時存在兩個可見的 `ytmusic-player-bar`。DOM 第一個是 `ytmusic-player-page` 內、位於頂端的 `#top-player-bar`，高 64px且 progress bar 隱藏；第二個才是固定於 viewport 底部的 64px 播放器列，其 31px seekbar 跨過播放列頂緣。直接使用 `querySelector()` 會量到頂端列，造成黑色 backing 的底部邊界錯誤；若選對底部列後仍強制使用桌面版 72px 最小高度，也會讓 backing 與實際 64px 播放器列相差 8px。
+
+修正原則：先由所有可見播放器列候選中，選擇底緣最接近 viewport 底部者，讓按鈕與 Carousel 版面都以實際底部列為範圍。版面採用該列的實測高度，只有完全找不到有效矩形時才使用 fallback；按鈕 anchor 則與版面測量邏輯分離，依序選擇可見音量控制、mobile controls 或 desktop controls。不得依賴 DOM 順序、固定高度或單一 selector 的第一筆結果。
+
+按鈕 RWD 現象：原本注入流程只尋找 `#right-controls #volume-slider`。YouTube Music 切換 compact 播放列時，音量控制會成為 0×0 且 `display: none`，改顯示 `#right-controls-mweb`；若原生重繪同時移除舊按鈕，流程因找不到可用音量 anchor 提前結束，按鈕不會自行恢復。修正後 resize 與播放器列子樹變更都會重新選擇可見 anchor，並重掛同一個按鈕。
+
+600px 現象：`ytmusic-app-layout` 進入 `player-ui-state="PLAYER_PAGE_OPEN"` 後，底部播放器列會被 YouTube Music 寫入 inline `visibility: hidden`，頂端 `#top-player-bar` 也進入 opacity 0／hidden；底部露出 mobile player page 的「即將播放／歌詞／留言／相關內容」分頁列。Cover Flow 按鈕仍連線且已位於 `#right-controls-mweb`，只是隨整個播放器列隱藏。
+
+600px 後續：若候選過濾把 `visibility: hidden` 視為節點不存在，原生自動隱藏後會將 `layoutPlayerBar` 清為 `null`，使 active class 無法套用，host 也退回桌面版 fallback inset；此時看起來像 seekbar 被 Cover Flow 遮住。播放器列與 control anchor 應只排除 `display: none` 或沒有尺寸的候選，保留具有 layout 但 visibility 暫時 hidden 的底部列。
+
+600px 結論：此狀態不是按鈕注入失敗。Cover Flow 開啟期間，active 底部播放器列必須以 `!important` 暫時維持 `visibility: visible` 與 `opacity: 1`；BrowserOS Neo 即時套用後，64px 播放列、mobile controls 與按鈕穩定顯示，按鈕命中正常，mobile tabs 不再露出。關閉時移除 active class，還原原生自動隱藏。

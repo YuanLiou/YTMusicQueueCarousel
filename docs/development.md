@@ -28,6 +28,10 @@ Chrome isolated content script 無法直接讀取 YouTube Polymer 元件的 `row
 
 YouTube Music 是單頁應用程式。內容腳本不能假設首次載入後 DOM 永遠不變，也不能只在 `DOMContentLoaded` 時注入一次。應以範圍受控的 `MutationObserver` 偵測播放器列被建立或替換，確保 Cover Flow 按鈕存在且不重複注入。
 
+播放器列的 RWD 可能只以 CSS 切換不同控制群，不一定替換整個元件。Cover Flow 按鈕應綁定實際位於 viewport 底部的可見播放器列；桌面版優先放在可見音量控制左側，compact 版則放入可見的 mobile controls。視窗 resize 與播放器列子樹重繪後都必須重新判定 anchor，並移動同一個既有按鈕，避免重複或永久消失。
+
+窄版 `PLAYER_PAGE_OPEN` 狀態會在控制自動隱藏時，直接替底部播放器列寫入 inline `visibility: hidden`。播放器列與按鈕 anchor 的結構判定應以 `display`、實際尺寸及 viewport 位置為準，不得因暫時的 inherited visibility 將仍有 layout 的節點視為不存在。Carousel 開啟期間再由 active class 暫時強制實際底部播放器列保持可見與不透明，確保原生控制及 Carousel 按鈕可操作；Carousel 關閉時移除 active class，完整還原 YouTube Music 的原生顯示行為。
+
 頁面可能同時存在可見項目、隱藏項目、過場副本或尚未載入完成的透明 GIF 圖片。佇列正規化不能只用歌曲名稱去重，因為同名歌曲可能合法重複；也不能把每個匹配節點都視為獨立曲目。應先鎖定實際佇列列元素，再以原生列的穩定識別資訊、播放目標與順序建立快照。
 
 DOM selector 應分層處理。優先使用語意角色、可存取名稱、原生元件責任與彼此相對位置；必要時才使用元件標籤或 class。所有 selector 都應集中管理，避免散落在動畫或事件處理程式中。若必要節點不存在，功能應顯示空狀態或停止注入，不得影響原生播放器。
@@ -53,6 +57,8 @@ DOM selector 應分層處理。優先使用語意角色、可存取名稱、原�
 ## 6. 視覺與動畫模型
 
 Cover Flow 舞台使用不透明或接近不透明的黑色背景。中央封面正面顯示，左右封面依相對中央索引計算水平位移、深度、縮放、向外旋轉角度與層級。封面倒影可以使用同一張圖片的鏡像元素與漸層遮罩實作，不需要 canvas。
+
+Shadow host 應提供黑色背景與裁切，底部只延伸至跨出播放器列邊界的透明 seekbar 合成層底緣，不得涵蓋整個播放器控制列。YouTube Music 在窄視窗可能同時保留播放器頁頂端列與 viewport 底部列，版面測量不得直接取 DOM 中第一個播放器列；應從可見候選中選擇底緣最接近 viewport 底部者，再由該列的 seekbar 與播放器列實測矩形計算延伸深度。Carousel 舞台本身仍停在播放器列頂端，避免封面、文字與互動區進入播放器列。原生底部播放器列維持較高 z-index，控制與 seekbar 仍可操作。垂直空間不足時，以 `max-height: 620px` 切換精簡品牌樣式與全封面播放控制；互動語意與播放委派不得改變。
 
 每個畫面更新都由「曲目索引相對於中央索引的距離」推導 transform，不累積增量座標。這能避免快速輸入後浮點誤差、封面錯位與 z-index 不一致。
 

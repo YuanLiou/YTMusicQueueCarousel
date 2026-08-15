@@ -30,6 +30,44 @@ test("toggles visibility unless an explicit state is requested", () => {
   assert.equal(core.nextVisibility(true, false), false);
 });
 
+test("selects the visible player bar anchored nearest the viewport bottom", () => {
+  const candidates = [
+    { top: 0, bottom: 64, width: 609, height: 64, display: "grid", visibility: "visible" },
+    { top: 818, bottom: 882, width: 597, height: 64, display: "grid", visibility: "hidden" },
+    { top: 810, bottom: 882, width: 0, height: 0, display: "none", visibility: "visible" }
+  ];
+
+  assert.equal(core.selectViewportBottomCandidateIndex(candidates, 882), 1);
+  assert.equal(core.selectViewportBottomCandidateIndex([], 882), -1);
+  assert.equal(core.selectViewportBottomCandidateIndex(candidates, Number.NaN), -1);
+});
+
+test("selects the first sized responsive player control mount despite inherited visibility", () => {
+  const hiddenVolume = { width: 0, height: 0, display: "none", visibility: "visible" };
+  const mobileControls = { width: 104, height: 64, display: "flex", visibility: "hidden" };
+  const desktopControls = { width: 220, height: 40, display: "flex", visibility: "visible" };
+
+  assert.equal(core.selectFirstSizedCandidateIndex([desktopControls, mobileControls]), 0);
+  assert.equal(core.selectFirstSizedCandidateIndex([hiddenVolume, mobileControls]), 1);
+  assert.equal(core.selectFirstSizedCandidateIndex([hiddenVolume]), -1);
+  assert.equal(core.selectFirstSizedCandidateIndex(null), -1);
+});
+
+test("calculates overlay insets from desktop and compact player bar geometry", () => {
+  assert.deepEqual(
+    core.calculateOverlayInsets({ top: 693, height: 72 }, { bottom: 710 }),
+    { playerBarHeight: 72, progressDepth: 17, hostBottom: 55 }
+  );
+  assert.deepEqual(
+    core.calculateOverlayInsets({ top: 818, height: 64 }, { bottom: 834.5 }),
+    { playerBarHeight: 64, progressDepth: 17, hostBottom: 47 }
+  );
+  assert.deepEqual(
+    core.calculateOverlayInsets(null, null),
+    { playerBarHeight: 72, progressDepth: 16, hostBottom: 56 }
+  );
+});
+
 test("normalizes text runs without leaking layout whitespace", () => {
   assert.equal(core.cleanText("  田馥甄\n  無人知曉  "), "田馥甄 無人知曉");
   assert.equal(core.textFromRuns({
