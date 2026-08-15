@@ -146,7 +146,7 @@
     const button = document.createElement("button");
     button.id = BUTTON_ID;
     button.type = "button";
-    button.setAttribute("aria-label", "切換 YouTube Music Queue Carousel");
+    button.setAttribute("aria-label", "Toggle YouTube Music Queue Carousel");
     button.setAttribute("aria-pressed", "false");
     button.title = "YouTube Music Queue Carousel";
     button.innerHTML = `
@@ -533,7 +533,7 @@
         <div
           class="viewport"
           role="listbox"
-          aria-label="YouTube Music Queue Carousel 播放佇列"
+          aria-label="YouTube Music Queue Carousel queue"
           tabindex="0"
           style="--cover-size: min(30vw, 40vh, 360px)"
         >
@@ -596,7 +596,7 @@
 
     const action = core.getPlaybackAction(queueSnapshot.items, index);
     playButton.dataset.action = action;
-    playButton.setAttribute("aria-label", `${action === "pause" ? "暫停" : "播放"} ${item.title}`);
+    playButton.setAttribute("aria-label", `${action === "pause" ? "Pause" : "Play"} ${item.title}`);
   }
 
   function createCoverCard(item, index) {
@@ -604,7 +604,7 @@
     card.className = "cover-card";
     card.dataset.index = String(index);
     card.setAttribute("role", "option");
-    card.setAttribute("aria-label", `選取 ${item.title}`);
+    card.setAttribute("aria-label", `Select ${item.title}`);
     card.setAttribute("aria-selected", "false");
     card.tabIndex = -1;
 
@@ -748,8 +748,8 @@
       card.setAttribute(
         "aria-label",
         index === selectedIndex
-          ? `目前置中的 ${queueSnapshot.items[index].title}`
-          : `置中 ${queueSnapshot.items[index].title}`
+          ? `Currently centered ${queueSnapshot.items[index].title}`
+          : `Center ${queueSnapshot.items[index].title}`
       );
       updatePlayButton(card.querySelector(".play-button"), index);
     }
@@ -1448,7 +1448,15 @@
   }
 
   function setOpen(requested) {
-    isOpen = core.nextVisibility(isOpen, requested);
+    const nextIsOpen = core.nextVisibility(isOpen, requested);
+    const nextSnapshot = nextIsOpen ? captureQueueSnapshot() : null;
+
+    if (nextIsOpen && !core.hasQueueItems(nextSnapshot.items)) {
+      getButton()?.toggleAttribute("hidden", true);
+      return;
+    }
+
+    isOpen = nextIsOpen;
 
     const host = getOverlayHost();
     if (overlayFadeFrame) {
@@ -1464,7 +1472,7 @@
     setNativeQueueVisibility(isOpen);
 
     if (isOpen) {
-      queueSnapshot = captureQueueSnapshot();
+      queueSnapshot = nextSnapshot;
       renderQueueShellState();
       updateOverlayInset();
       bindQueueObserver();
@@ -1513,6 +1521,15 @@
     );
     const currentPlayerBar = playerBars[layoutPlayerBarIndex] || null;
     bindLayoutPlayerBar(currentPlayerBar);
+    const queueAvailable = core.hasQueueItems(captureQueueSnapshot().items);
+    if (!queueAvailable) {
+      if (isOpen) {
+        setOpen(false);
+      }
+      getButton()?.toggleAttribute("hidden", true);
+      return;
+    }
+
     if (!currentPlayerBar) {
       return;
     }
@@ -1560,6 +1577,7 @@
     }
 
     button.setAttribute("aria-pressed", String(isOpen));
+    button.hidden = false;
     updateOverlayInset();
   }
 
@@ -1609,7 +1627,10 @@
     }
 
     queueObserver?.disconnect();
-    queueObserver = new MutationObserver(scheduleCurrentTrackSync);
+    queueObserver = new MutationObserver(() => {
+      scheduleCurrentTrackSync();
+      schedulePlayerButtonCheck();
+    });
     queueObserver.observe(root, {
       attributes: true,
       attributeFilter: ["play-button-state", "selected"],

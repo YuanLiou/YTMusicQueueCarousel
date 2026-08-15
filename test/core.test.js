@@ -30,6 +30,12 @@ test("toggles visibility unless an explicit state is requested", () => {
   assert.equal(core.nextVisibility(true, false), false);
 });
 
+test("recognizes whether the queue contains tracks", () => {
+  assert.equal(core.hasQueueItems([]), false);
+  assert.equal(core.hasQueueItems(null), false);
+  assert.equal(core.hasQueueItems([{ title: "Track" }]), true);
+});
+
 test("selects the visible player bar anchored nearest the viewport bottom", () => {
   const candidates = [
     { top: 0, bottom: 64, width: 609, height: 64, display: "grid", visibility: "visible" },

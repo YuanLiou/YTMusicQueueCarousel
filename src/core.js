@@ -9,8 +9,8 @@
   root.YtmCoverFlowCore = api;
 })(typeof globalThis === "object" ? globalThis : this, function createCoverFlowCore() {
   const MESSAGE_TOGGLE = "ytm-cover-flow:toggle";
-  const UNKNOWN_TRACK_TITLE = "未知曲目";
-  const EMPTY_QUEUE_MESSAGE = "沒有曲目";
+  const UNKNOWN_TRACK_TITLE = "Unknown track";
+  const EMPTY_QUEUE_MESSAGE = "No tracks available";
 
   function cleanText(value) {
     return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
@@ -450,6 +450,10 @@
     };
   }
 
+  function hasQueueItems(items) {
+    return Array.isArray(items) && items.length > 0;
+  }
+
   function getPlaybackAction(items, selectedIndex) {
     const selected = clampIndex(selectedIndex, Array.isArray(items) ? items.length : 0);
     const item = selected >= 0 ? items[selected] : null;
@@ -575,6 +579,7 @@
     getCoverLayout,
     getPlaybackAction,
     getVisibleRange,
+    hasQueueItems,
     isPointInPolygon,
     isToggleMessage,
     isSameTrack,

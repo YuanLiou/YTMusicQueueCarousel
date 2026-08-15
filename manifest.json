@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
   "name": "YouTube Music Queue Carousel",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Browse the current YouTube Music queue with a carousel interface.",
   "permissions": ["activeTab"],
   "host_permissions": ["https://music.youtube.com/*"],
   "action": {
-    "default_title": "切換 YouTube Music Queue Carousel",
+    "default_title": "Toggle YouTube Music Queue Carousel",
     "default_icon": {
       "16": "assets/icons/icon-16.png",
       "32": "assets/icons/icon-32.png",
