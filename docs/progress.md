@@ -38,7 +38,7 @@ BrowserOS Neo 啟用內容阻擋擴充套件時，YouTube 的 `/generate_204`、
 
 ## 下一步
 
-1.0 版號、英文 UI 文字與空佇列入口規則已完成。25 項 Unit Test、JavaScript／JSON 靜態檢查、diff 檢查與 BrowserOS Neo 實站驗證通過，等待完整 diff 與 commit 草稿核准。
+已確認以 `Ray Yuan Liu` 為權利人，採用 PolyForm Noncommercial 1.0.0 source-available 授權；等待 diff 檢查與 commit 草稿核准。
 
 ## 開發紀錄
 
@@ -75,6 +75,8 @@ seekbar 遮擋修正以 commit `b87e939` 完成並推送至 `origin/master`。�
 使用者核准播放控制與開啟體驗優化 DoD。完成目前播放曲目的暫停圖示與原生暫停委派、點擊後縮小回彈、任一封面僅置中、原生播放佇列開啟時隱藏與關閉後還原、快速淡入，以及左上角單色 YouTube Music Logo；同步更新產品規格。使用者回報側邊封面點擊失敗與 Hover 紅色過強後，移除紅色 Hover，並依實體事件紀錄修正 viewport pointer capture 與 3D Cover 命中判定。18 項 Unit Test、靜態檢查與 BrowserOS Neo 實站驗證結果已記於「最新驗證」，等待完整 diff 與 commit 草稿核准。
 
 ### 2026-08-15
+
+使用者確認以 `Ray Yuan Liu` 為權利人，改採 PolyForm Noncommercial 1.0.0。根目錄 `LICENSE` 已包含官方完整條文與 `Required Notice: Copyright © 2026 Ray Yuan Liu`；這是允許非商業使用、修改與散布的 source-available 授權，不是 OSI 開源授權。未修改程式碼或產品規格，等待 diff 檢查與 commit 草稿核准。
 
 使用者核准 1.0 版號、英文 UI 文字與空佇列入口規則。`manifest.json` 與 `package.json` 版號已由 `0.1.0` 升為 `1.0.0`；播放列按鈕、Carousel 可存取名稱、播放／暫停、封面選取、Unknown track 與 No tracks available 均改為英文。空佇列時，播放列按鈕隱藏且工具列 action 不建立 Carousel；佇列 DOM 再次出現歌曲時按鈕會自動恢復，若開啟期間佇列變空則關閉 Carousel。新增純函式回歸測試；25 項 Unit Test、四個 JavaScript 語法、manifest／package JSON 與 `git diff --check` 通過。使用者重新載入後，BrowserOS Neo 實測 21 首佇列時播放列按鈕顯示英文名稱且可開啟 Carousel，對話框、封面選取與播放按鈕的可存取文字均為英文；在代理驗證分頁暫時清空佇列 DOM 後，按鈕立即 hidden、已開啟的 Carousel 關閉，重新載入後曲目與按鈕皆恢復。BrowserOS Neo 無法直接操作瀏覽器外框的工具列圖示，但其 message handler 與播放列入口共用相同的空佇列 guard。
 
