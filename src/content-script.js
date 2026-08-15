@@ -40,6 +40,14 @@
   const WHEEL_PIXELS_PER_ITEM = 240;
   const DRAG_THRESHOLD = 6;
   const SNAP_DURATION = 320;
+  const CONTINUOUS_OVERSCROLL_MAX_PX = 198;
+  const CONTINUOUS_OVERSCROLL_COVER_RATIO = 0.55;
+  const RUBBER_BAND_SOFTNESS = 0.65;
+  const KEYBOARD_OVERSCROLL_MAX_PX = 72;
+  const KEYBOARD_OVERSCROLL_COVER_RATIO = 0.2;
+  const WHEEL_SETTLE_DELAY = 50;
+  const RUBBER_BAND_SPRING = { stiffness: 260, damping: 22, maxDuration: 520 };
+  const KEYBOARD_SPRING = { stiffness: 180, damping: 16, maxDuration: 1000 };
 
   let isOpen = false;
   let appLayout = null;
@@ -55,6 +63,8 @@
   let queueSnapshot = core.createQueueSnapshot([]);
   let queueRows = new Map();
   let selectedPosition = -1;
+  let inputPosition = -1;
+  let overscrollOffset = 0;
   let renderedRange = { start: -2, end: -2 };
   let coverCards = new Map();
   let animationFrame = 0;
@@ -239,6 +249,10 @@
           position: relative;
           transform-style: preserve-3d;
           width: 100%;
+        }
+
+        .flow.rubber-banding {
+          will-change: transform;
         }
 
         .cover-card {
@@ -727,6 +741,111 @@
     renderSelectedPosition(options);
   }
 
+  function setOverscrollOffset(offset) {
+    if (!Number.isFinite(offset)) {
+      return;
+    }
+
+    overscrollOffset = Math.abs(offset) < 0.001 ? 0 : offset;
+    const { flow } = getOverlayParts();
+    if (!flow) {
+      return;
+    }
+
+    flow.style.transform = overscrollOffset === 0
+      ? ""
+      : `translate3d(${overscrollOffset}px, 0, 0)`;
+    flow.classList.toggle("rubber-banding", overscrollOffset !== 0);
+  }
+
+  function prefersReducedMotion() {
+    return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+  }
+
+  function getResponsiveCoverSize() {
+    return Math.min(window.innerWidth * 0.3, window.innerHeight * 0.4, 360);
+  }
+
+  function getContinuousOverscrollMaximum() {
+    return core.responsiveOverscrollDistance(
+      getResponsiveCoverSize(),
+      CONTINUOUS_OVERSCROLL_COVER_RATIO,
+      CONTINUOUS_OVERSCROLL_MAX_PX
+    ) / POINTER_PIXELS_PER_ITEM;
+  }
+
+  function getKeyboardOverscrollDistance() {
+    return core.responsiveOverscrollDistance(
+      getResponsiveCoverSize(),
+      KEYBOARD_OVERSCROLL_COVER_RATIO,
+      KEYBOARD_OVERSCROLL_MAX_PX
+    );
+  }
+
+  function setInteractivePosition(position, options) {
+    inputPosition = Number.isFinite(position) ? position : 0;
+    const boundedPosition = core.clampPosition(inputPosition, queueSnapshot.items.length);
+    setSelectedPosition(boundedPosition, options);
+
+    if (prefersReducedMotion()) {
+      setOverscrollOffset(0);
+      return;
+    }
+
+    const rubberBandPosition = core.rubberBandPosition(
+      inputPosition,
+      queueSnapshot.items.length,
+      getContinuousOverscrollMaximum(),
+      RUBBER_BAND_SOFTNESS
+    );
+    setOverscrollOffset((boundedPosition - rubberBandPosition) * POINTER_PIXELS_PER_ITEM);
+  }
+
+  function animateRubberBandReturn(target, spring) {
+    const boundedTarget = core.clampIndex(target, queueSnapshot.items.length);
+    if (boundedTarget < 0) {
+      return;
+    }
+
+    cancelAnimation();
+    inputPosition = boundedTarget;
+    setSelectedPosition(boundedTarget);
+    if (prefersReducedMotion() || Math.abs(overscrollOffset) < 0.1) {
+      setOverscrollOffset(0);
+      setSelectedPosition(boundedTarget);
+      return;
+    }
+
+    const { damping, maxDuration, stiffness } = spring;
+    let position = overscrollOffset;
+    let velocity = 0;
+    let previousTime = performance.now();
+    const startedAt = previousTime;
+
+    const tick = (now) => {
+      const deltaTime = Math.min(0.032, Math.max(0.001, (now - previousTime) / 1000));
+      previousTime = now;
+      velocity += -position * stiffness * deltaTime;
+      velocity *= Math.exp(-damping * deltaTime);
+      position += velocity * deltaTime;
+      setOverscrollOffset(position);
+
+      if (
+        (Math.abs(position) < 0.1 && Math.abs(velocity) < 0.4)
+        || now - startedAt > maxDuration
+      ) {
+        animationFrame = 0;
+        setOverscrollOffset(0);
+        setSelectedPosition(boundedTarget);
+        return;
+      }
+
+      animationFrame = requestAnimationFrame(tick);
+    };
+
+    animationFrame = requestAnimationFrame(tick);
+  }
+
   function animateToIndex(index) {
     const target = core.clampIndex(index, queueSnapshot.items.length);
     if (target < 0) {
@@ -734,12 +853,14 @@
     }
 
     cancelAnimation();
+    setOverscrollOffset(0);
     const start = selectedPosition;
     const distance = target - start;
-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const reducedMotion = prefersReducedMotion();
 
     if (reducedMotion || Math.abs(distance) < 0.001) {
       setSelectedPosition(target);
+      inputPosition = target;
       return;
     }
 
@@ -756,6 +877,7 @@
       } else {
         animationFrame = 0;
         setSelectedPosition(target);
+        inputPosition = target;
       }
     };
 
@@ -764,11 +886,31 @@
 
   function moveSelection(delta) {
     const currentIndex = core.settleIndex(selectedPosition, queueSnapshot.items.length);
-    animateToIndex(core.moveIndex(currentIndex, delta, queueSnapshot.items.length));
+    const target = core.moveIndex(currentIndex, delta, queueSnapshot.items.length);
+    if (target !== currentIndex) {
+      animateToIndex(target);
+      return;
+    }
+
+    if (prefersReducedMotion()) {
+      return;
+    }
+
+    cancelAnimation();
+    inputPosition = currentIndex;
+    setSelectedPosition(currentIndex);
+    setOverscrollOffset(-Math.sign(delta) * getKeyboardOverscrollDistance());
+    animateRubberBandReturn(currentIndex, KEYBOARD_SPRING);
   }
 
   function snapToNearestCover() {
-    animateToIndex(core.settleIndex(selectedPosition, queueSnapshot.items.length));
+    const target = core.settleIndex(inputPosition, queueSnapshot.items.length);
+    const lastIndex = queueSnapshot.items.length - 1;
+    if (inputPosition < 0 || inputPosition > lastIndex) {
+      animateRubberBandReturn(target, RUBBER_BAND_SPRING);
+      return;
+    }
+    animateToIndex(target);
   }
 
   function findLiveQueueRow(item) {
@@ -1051,9 +1193,13 @@
 
     if (hasItems) {
       selectedPosition = queueSnapshot.selectedIndex;
+      inputPosition = selectedPosition;
+      setOverscrollOffset(0);
       renderSelectedPosition({ immediateInfo: true });
     } else {
       selectedPosition = -1;
+      inputPosition = -1;
+      setOverscrollOffset(0);
     }
   }
 
@@ -1062,13 +1208,17 @@
       return;
     }
 
+    const wasWheelActive = Boolean(wheelTimer);
     cancelAnimation();
     clearTimeout(wheelTimer);
+    if (!wasWheelActive) {
+      inputPosition = core.clampPosition(selectedPosition, queueSnapshot.items.length);
+    }
     suppressClick = false;
     pointerState = {
       id: event.pointerId,
       moved: false,
-      startPosition: selectedPosition,
+      startPosition: inputPosition,
       startX: event.clientX
     };
   }
@@ -1092,11 +1242,10 @@
     }
 
     event.preventDefault();
-    setSelectedPosition(core.positionFromPointer(
+    setInteractivePosition(core.rawPositionFromPointer(
       pointerState.startPosition,
       deltaX,
-      POINTER_PIXELS_PER_ITEM,
-      queueSnapshot.items.length
+      POINTER_PIXELS_PER_ITEM
     ));
   }
 
@@ -1154,7 +1303,11 @@
       const transformedX = translateX + (relativeX * cosine);
       const transformedY = translateY + relativeY;
       const transformedZ = layout.translateZ - (relativeX * sine);
-      const worldX = viewportRect.left + card.offsetLeft + originX + transformedX;
+      const worldX = viewportRect.left
+        + card.offsetLeft
+        + originX
+        + transformedX
+        + overscrollOffset;
       const worldY = viewportRect.top + card.offsetTop + originY + transformedY;
       const perspectiveScale = perspectiveDistance / (perspectiveDistance - transformedZ);
 
@@ -1225,15 +1378,20 @@
 
     event.preventDefault();
     cancelAnimation();
+    if (!wheelTimer) {
+      inputPosition = selectedPosition;
+    }
     clearTimeout(wheelTimer);
-    setSelectedPosition(core.positionFromWheel(
-      selectedPosition,
+    setInteractivePosition(core.rawPositionFromWheel(
+      inputPosition,
       event.deltaX,
       event.deltaY,
-      WHEEL_PIXELS_PER_ITEM,
-      queueSnapshot.items.length
+      WHEEL_PIXELS_PER_ITEM
     ));
-    wheelTimer = window.setTimeout(snapToNearestCover, 110);
+    wheelTimer = window.setTimeout(() => {
+      wheelTimer = 0;
+      snapToNearestCover();
+    }, WHEEL_SETTLE_DELAY);
   }
 
   function updateOverlayInset() {
@@ -1273,6 +1431,7 @@
       getOverlayParts().viewport?.focus({ preventScroll: true });
     } else {
       cancelAnimation();
+      setOverscrollOffset(0);
       stopCurrentTrackSync();
       if (syncFrame) {
         cancelAnimationFrame(syncFrame);

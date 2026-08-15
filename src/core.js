@@ -256,6 +256,41 @@
     return Math.min(Math.trunc(length) - 1, Math.max(0, value));
   }
 
+  function rubberBandPosition(position, length, maximum = 0.9, softness = 0.65) {
+    if (!Number.isFinite(length) || length <= 0) {
+      return -1;
+    }
+
+    const value = Number.isFinite(position) ? position : 0;
+    const lastIndex = Math.trunc(length) - 1;
+    const safeMaximum = Number.isFinite(maximum) && maximum > 0 ? maximum : 0;
+    const safeSoftness = Number.isFinite(softness) && softness > 0 ? softness : 1;
+
+    if (value >= 0 && value <= lastIndex) {
+      return value;
+    }
+
+    const edge = value < 0 ? 0 : lastIndex;
+    const distance = value - edge;
+    const compressedDistance = safeMaximum * (1 - Math.exp(-Math.abs(distance) / safeSoftness));
+    return edge + (Math.sign(distance) * compressedDistance);
+  }
+
+  function responsiveOverscrollDistance(coverSize, ratio, maximum) {
+    if (
+      !Number.isFinite(coverSize)
+      || coverSize <= 0
+      || !Number.isFinite(ratio)
+      || ratio <= 0
+      || !Number.isFinite(maximum)
+      || maximum <= 0
+    ) {
+      return 0;
+    }
+
+    return Math.min(maximum, coverSize * ratio);
+  }
+
   function moveIndex(index, delta, length) {
     const current = clampIndex(index, length);
     if (current < 0) {
@@ -275,6 +310,16 @@
     return clampPosition(startPosition - (distance / step), length);
   }
 
+  function rawPositionFromPointer(startPosition, deltaX, pixelsPerItem) {
+    const start = Number.isFinite(startPosition) ? startPosition : 0;
+    const distance = Number.isFinite(deltaX) ? deltaX : 0;
+    const step = Number.isFinite(pixelsPerItem) && pixelsPerItem > 0
+      ? pixelsPerItem
+      : 1;
+
+    return start - (distance / step);
+  }
+
   function positionFromWheel(currentPosition, deltaX, deltaY, pixelsPerItem, length) {
     const horizontal = Number.isFinite(deltaX) ? deltaX : 0;
     const vertical = Number.isFinite(deltaY) ? deltaY : 0;
@@ -284,6 +329,18 @@
       : 1;
 
     return clampPosition(currentPosition + (dominantDelta / step), length);
+  }
+
+  function rawPositionFromWheel(currentPosition, deltaX, deltaY, pixelsPerItem) {
+    const current = Number.isFinite(currentPosition) ? currentPosition : 0;
+    const horizontal = Number.isFinite(deltaX) ? deltaX : 0;
+    const vertical = Number.isFinite(deltaY) ? deltaY : 0;
+    const dominantDelta = Math.abs(horizontal) > Math.abs(vertical) ? horizontal : vertical;
+    const step = Number.isFinite(pixelsPerItem) && pixelsPerItem > 0
+      ? pixelsPerItem
+      : 1;
+
+    return current + (dominantDelta / step);
   }
 
   function getVisibleRange(position, length, radius = 6) {
@@ -455,6 +512,10 @@
     parseSrcset,
     positionFromPointer,
     positionFromWheel,
+    rawPositionFromPointer,
+    rawPositionFromWheel,
+    responsiveOverscrollDistance,
+    rubberBandPosition,
     selectLargestImage,
     settleIndex,
     textFromRuns,

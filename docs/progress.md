@@ -12,6 +12,12 @@ MVP 第一、二階段已由 commit `b61d299` 完成，第三階段「Cover Flow
 
 2026-08-15：播放列 Carousel 按鈕已攔截指標與鍵盤事件，並使開啟狀態下焦點留在該按鈕的 `Enter` 不觸發中央曲目播放。BrowserOS Neo 實測滑鼠 click 與實體 `Enter` 都只切換 Carousel，原生佇列由開啟狀態還原時仍保持開啟；使用者重新載入後再確認左上角 Logo 的 computed style 為 condensed、Medium 500、20px。`npm test` 共 19 項通過，四個 JavaScript 檔案通過 `node --check`，`manifest.json` JSON 解析與 `git diff --check` 通過。
 
+2026-08-15：橡皮筋回彈以未限制輸入位置與阻尼後視覺位置分離實作。BrowserOS Neo 實測多曲佇列起點與單曲佇列的左方向鍵、滾輪向外，都產生非中央 transform frame 後回到中央；佇列索引與原生目前曲目維持不變。`drag_at` 沒有送出按住狀態的 pointer event，實體拖曳仍待使用者手動確認。`npm test` 共 20 項通過。
+
+2026-08-15：使用者手動驗證發現起點向前的滾輪與鍵盤回彈卡頓且不明顯，終點方向則正常，並要求提高拉伸幅度。修正改為保持卡片合法索引與既有 3D 佈局，只對整個封面舞台套用對稱的水平橡皮筋位移；最大拉伸提高，鍵盤使用獨立的 56px 短回彈。重新載入後，BrowserOS Neo 在 21 首佇列以鍵盤與滾輪量得起點 `+158px`、終點 `-158px` 峰值，皆回到 0；單曲佇列雙向亦量得相同峰值並回到 0。選取與原生目前曲目沒有改變。
+
+2026-08-15：使用者手動確認對稱回彈效果通過，並持續微調頂峰停留與鍵盤速度。滾輪結束 debounce 最終由 110ms 降為 50ms；鍵盤 spring 再降低 stiffness 與 damping，動畫上限延長至 1000ms。另完成縮放 Spike：建議依橡皮筋位移比例讓 `.flow` 最多縮小 3.5%，與水平位移共用同一 spring 回到 1；實作時需同步修正投影點擊命中的全域 scale。
+
 2026-08-15：側邊 Cover 點擊精度改為依 Carousel transform 參數計算投影四邊形，取代互相重疊的矩形外框與 Chrome 3D target；新增 point-in-polygon Unit Test，`npm test` 共 19 項通過。BrowserOS Neo 先將原生播放器固定為暫停、中央索引固定為 12，再以實體座標驗證右側重疊區選到前方索引 13、右側外緣選到索引 14、左側重疊區選到前方索引 11、左側外緣選到索引 9。原生曲目全程維持 `Smile in your face` 且保持暫停，瀏覽沒有觸發播放。
 
 2026-08-14：播放控制與開啟體驗優化後，`npm test` 共 18 項通過，四個 JavaScript 檔案通過 `node --check`，`manifest.json` JSON 解析與 `git diff --check` 通過。BrowserOS Neo 重新載入擴充套件後，實際確認左上角單色 YouTube Music Logo、Carousel 黑色舞台、原生播放佇列在開啟時為 `display: none`、關閉後顯示還原。中央播放控制在原生歌曲播放後由「播放」變為「暫停」，點擊後原生播放器同步變為暫停且控制回到「播放」。使用者兩次手動驗證發現側邊封面點擊無法置中；事件紀錄確認 Chrome 將 3D 旋轉封面的可見位置命中為 `.flow` 背景。改以 click 座標與可見 Cover 實際範圍判定後，BrowserOS Neo 重新整理頁面並以實體座標點擊右側 `お化けひまわり`，中央索引從 12 移至 13；再點擊左側 `Smile in your face`，索引從 13 回到 12。原生播放器全程維持 `Smile in your face`，沒有因瀏覽切歌。Hover 按鈕維持深色背景；點擊後 `is-activated` 狀態的 transform 實際進入縮放中間值，再回彈至原尺寸。
@@ -32,7 +38,7 @@ BrowserOS Neo 啟用內容阻擋擴充套件時，YouTube 的 `/generate_204`、
 
 ## 下一步
 
-檢視本次完整 diff 與 draft commit message；取得使用者明確核准後，僅 stage `src/content-script.js`、`docs/spec.md`、`docs/findings.md` 與本檔案。
+橡皮筋回彈與小視窗響應式距離已由使用者手動確認通過。等待 draft commit message 核准；取得明確核准後，只 stage `src/core.js`、`src/content-script.js`、`test/core.test.js`、`docs/spec.md`、`docs/development.md`、`docs/findings.md` 與本檔案。
 
 ## 開發紀錄
 
@@ -75,3 +81,11 @@ seekbar 遮擋修正以 commit `b87e939` 完成並推送至 `origin/master`。�
 使用者要求將 YouTube Music「自動加入」相似歌曲的動態佇列同步列為未來強化。`spec.md` 已新增 FE-001 與 FE-002，現行 MVP 的固定快照行為不變。
 
 使用者核准播放列按鈕隔離與 condensed Logo DoD。播放列按鈕現會攔截指標與鍵盤事件，click 只切換 Carousel；Carousel 開啟時，焦點位於該按鈕的 `Enter` 不會再誤觸中央曲目播放。Logo 改為 condensed、Medium 500、20px 字體風格。19 項 Unit Test、靜態檢查、JSON 解析、diff 檢查與 BrowserOS Neo 的滑鼠／鍵盤實站驗證通過，等待完整 diff 與 commit 草稿核准。
+
+使用者核准橡皮筋回彈 DoD。拖曳與滾輪在起點／終點提供有限的阻尼視覺越界，單曲也能雙向回彈；鍵盤在邊界再往外時以較小、較短的 spring 回彈，減少動態效果時直接停在邊界。20 項 Unit Test 與 BrowserOS Neo 的鍵盤／滾輪實站驗證通過；實體拖曳驗證待使用者手動確認。
+
+使用者手動驗證指出初版在起點向前的滾輪與鍵盤回彈卡頓且不明顯，終點方向正常。改以整體舞台水平位移取代越界分數索引，避免邊界外重新計算卡片旋轉、深度與層級；同時提高最大拉伸並將鍵盤回彈設為 56px。BrowserOS Neo 已確認多曲佇列兩端與單曲雙向的位移峰值對稱、皆能回正且不改變播放；等待使用者再次手動確認手感。
+
+使用者手動確認第二版回彈效果通過。依兩次後續微調，滾輪結束 debounce 最終縮短為 50ms，鍵盤回彈降低至 stiffness 180、damping 16 並延長至最多 1000ms。縮放 Spike 建議只縮放 `.flow` 內的封面與倒影，最大約 3.5%，Logo 與曲目文字保持固定；尚未實作。
+
+使用者希望兩端能再往外拉一些。桌面 360px 封面下，滾輪與拖曳的最大視覺拉伸由約 158px 提高至約 198px，鍵盤邊界回彈由 56px 提高至 72px；較小視窗則改依封面尺寸縮放為約 55% 與 20%，避免固定像素造成相對位移過大。上一輪確認的 50ms 滾輪結束等待與鍵盤回彈速度維持不變。重新載入後，BrowserOS Neo 實測起點與終點分別為 `+198px`／`-198px`，鍵盤為 `+72px`／`-72px`，皆保持邊界索引並回到 0；使用者手動確認小視窗比例手感通過。

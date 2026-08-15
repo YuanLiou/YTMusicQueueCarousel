@@ -202,6 +202,30 @@ test("keeps continuous positions and discrete movement inside queue boundaries",
   assert.equal(core.moveIndex(3, 1, 4), 3);
 });
 
+test("compresses overscroll outside queue bounds, including a single-track queue", () => {
+  assert.equal(core.rubberBandPosition(1.25, 4), 1.25);
+  assert.equal(core.rubberBandPosition(0, 1), 0);
+  assert.ok(core.rubberBandPosition(-1, 1, 0.9, 0.65) < 0);
+  assert.ok(core.rubberBandPosition(-1, 1, 0.9, 0.65) > -0.9);
+  assert.ok(core.rubberBandPosition(1, 1, 0.9, 0.65) > 0);
+  assert.ok(core.rubberBandPosition(1, 1, 0.9, 0.65) < 0.9);
+  assert.ok(core.rubberBandPosition(-10, 1, 0.9, 0.65) > -0.9);
+  assert.ok(core.rubberBandPosition(10, 1, 0.9, 0.65) < 0.9);
+  assert.equal(
+    core.rubberBandPosition(-1, 1, 0.9, 0.65),
+    -core.rubberBandPosition(1, 1, 0.9, 0.65)
+  );
+  assert.equal(core.rubberBandPosition(0, 0), -1);
+});
+
+test("scales overscroll with responsive cover size while preserving desktop caps", () => {
+  assert.equal(core.responsiveOverscrollDistance(360, 0.55, 198), 198);
+  assert.ok(Math.abs(core.responsiveOverscrollDistance(180, 0.55, 198) - 99) < 1e-9);
+  assert.equal(core.responsiveOverscrollDistance(360, 0.2, 72), 72);
+  assert.equal(core.responsiveOverscrollDistance(180, 0.2, 72), 36);
+  assert.equal(core.responsiveOverscrollDistance(0, 0.55, 198), 0);
+});
+
 test("converts pointer and dominant wheel movement into continuous positions", () => {
   assert.equal(core.positionFromPointer(2, 110, 220, 5), 1.5);
   assert.equal(core.positionFromPointer(2, -220, 220, 5), 3);
@@ -209,6 +233,10 @@ test("converts pointer and dominant wheel movement into continuous positions", (
   assert.equal(core.positionFromWheel(1, 20, 120, 240, 5), 1.5);
   assert.equal(core.positionFromWheel(1, -240, 20, 240, 5), 0);
   assert.equal(core.positionFromWheel(4, 0, 300, 240, 5), 4);
+  assert.equal(core.rawPositionFromPointer(0, 220, 220), -1);
+  assert.equal(core.rawPositionFromPointer(0, -220, 220), 1);
+  assert.equal(core.rawPositionFromWheel(0, 0, -240, 240), -1);
+  assert.equal(core.rawPositionFromWheel(0, 0, 240, 240), 1);
 });
 
 test("calculates a bounded rendering window around the selected position", () => {
