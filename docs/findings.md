@@ -67,3 +67,11 @@
 現象：基本側邊點擊已能置中，但矩形包含旋轉後梯形以外的空白區，依中心距離選取時容易跳到視覺上位於後方的 Cover。
 
 結論：使用連續 `selectedPosition` 與 `getCoverLayout()` 的 transform 參數直接投影 Cover 四角，以 point-in-polygon 判斷真正命中項目；多個四邊形重疊時選擇 z-index 最高者。實體指標沒有命中任何四邊形時保持原選取，不退回 Chrome 的 3D target。BrowserOS Neo 固定播放器為暫停後，左右重疊區與外緣四種座標測試均選到預期索引。
+
+## 2026-08-15：播放列按鈕事件會冒泡至原生佇列切換器
+
+條件：將 Carousel 按鈕插入 YouTube Music 播放列的音量控制左側，點擊或以鍵盤啟動按鈕。
+
+現象：原生播放列的祖層也監聽指標與鍵盤事件，未隔離時會在切換 Carousel 的同時開關原生播放佇列；Carousel 開啟期間，文件層的 `Enter` 處理亦可能把按鈕啟動誤判為播放中央曲目。
+
+結論：按鈕必須攔截指標與鍵盤的冒泡事件，click handler 也必須停止冒泡；全域 Carousel 鍵盤處理則略過焦點在播放列按鈕上的事件。BrowserOS Neo 實測滑鼠 click 與實體 `Enter` 都只切換 Carousel，原生佇列狀態維持不變。

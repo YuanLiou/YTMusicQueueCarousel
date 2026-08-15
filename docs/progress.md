@@ -4,11 +4,13 @@
 
 ## 目前狀態
 
-MVP 第一、二階段已由 commit `b61d299` 完成，第三階段「Cover Flow 視覺、動畫與瀏覽輸入」已由 commit `1226559` 完成。方向鍵操作時 viewport 外圍的白色 focus box 已移除，保留焦點與鍵盤行為，並納入 commit `3b569e0`。第四階段「播放整合與狀態同步」已由 commit `ec438b1` 完成。seekbar 遮擋修正已由 commit `b87e939` 完成並推送至 `origin/master`；擴充套件圖示更新已由 commit `92bd081` 完成並推送至 `origin/master`。後續介面與播放控制優化已完成，工作目錄等待完整 diff 與 commit 草稿核准。
+MVP 第一、二階段已由 commit `b61d299` 完成，第三階段「Cover Flow 視覺、動畫與瀏覽輸入」已由 commit `1226559` 完成。方向鍵操作時 viewport 外圍的白色 focus box 已移除，保留焦點與鍵盤行為，並納入 commit `3b569e0`。第四階段「播放整合與狀態同步」已由 commit `ec438b1` 完成。seekbar 遮擋修正已由 commit `b87e939` 完成並推送至 `origin/master`；擴充套件圖示更新已由 commit `92bd081` 完成並推送至 `origin/master`。後續介面、播放控制與播放列入口隔離已完成，工作目錄等待完整 diff 與 commit 草稿核准。
 
 已核准的第三階段 DoD：呈現中央與兩側透視封面、倒影、中央曲目文字及圖片 Placeholder；支援方向鍵、滾輪、觸控板橫向輸入、拖曳與側邊封面點擊；以連續位置驅動動畫並在邊界內吸附。中央封面、Play Button、`Enter` 播放與原生播放同步仍留在下一階段。
 
 ## 最新驗證
+
+2026-08-15：播放列 Carousel 按鈕已攔截指標與鍵盤事件，並使開啟狀態下焦點留在該按鈕的 `Enter` 不觸發中央曲目播放。BrowserOS Neo 實測滑鼠 click 與實體 `Enter` 都只切換 Carousel，原生佇列由開啟狀態還原時仍保持開啟；使用者重新載入後再確認左上角 Logo 的 computed style 為 condensed、Medium 500、20px。`npm test` 共 19 項通過，四個 JavaScript 檔案通過 `node --check`，`manifest.json` JSON 解析與 `git diff --check` 通過。
 
 2026-08-15：側邊 Cover 點擊精度改為依 Carousel transform 參數計算投影四邊形，取代互相重疊的矩形外框與 Chrome 3D target；新增 point-in-polygon Unit Test，`npm test` 共 19 項通過。BrowserOS Neo 先將原生播放器固定為暫停、中央索引固定為 12，再以實體座標驗證右側重疊區選到前方索引 13、右側外緣選到索引 14、左側重疊區選到前方索引 11、左側外緣選到索引 9。原生曲目全程維持 `Smile in your face` 且保持暫停，瀏覽沒有觸發播放。
 
@@ -30,7 +32,7 @@ BrowserOS Neo 啟用內容阻擋擴充套件時，YouTube 的 `/generate_204`、
 
 ## 下一步
 
-檢視本次完整 diff 與 draft commit message；取得使用者明確核准後，僅 stage `src/core.js`、`src/content-script.js`、`src/page-bridge.js`、`test/core.test.js`、`docs/spec.md`、`docs/findings.md` 與本檔案。
+檢視本次完整 diff 與 draft commit message；取得使用者明確核准後，僅 stage `src/content-script.js`、`docs/spec.md`、`docs/findings.md` 與本檔案。
 
 ## 開發紀錄
 
@@ -69,3 +71,7 @@ seekbar 遮擋修正以 commit `b87e939` 完成並推送至 `origin/master`。�
 ### 2026-08-15
 
 使用者回報側邊 Cover 的矩形命中在邊緣容易選到後方項目。改以 Carousel transform 參數投影可見四邊形，重疊區依 z-index 選擇前方 Cover，實體點擊不再退回 Chrome 的 3D target。19 項 Unit Test、左右重疊區與外緣實站驗證通過，等待完整 diff 與 commit 草稿核准。
+
+使用者要求將 YouTube Music「自動加入」相似歌曲的動態佇列同步列為未來強化。`spec.md` 已新增 FE-001 與 FE-002，現行 MVP 的固定快照行為不變。
+
+使用者核准播放列按鈕隔離與 condensed Logo DoD。播放列按鈕現會攔截指標與鍵盤事件，click 只切換 Carousel；Carousel 開啟時，焦點位於該按鈕的 `Enter` 不會再誤觸中央曲目播放。Logo 改為 condensed、Medium 500、20px 字體風格。19 項 Unit Test、靜態檢查、JSON 解析、diff 檢查與 BrowserOS Neo 的滑鼠／鍵盤實站驗證通過，等待完整 diff 與 commit 草稿核准。

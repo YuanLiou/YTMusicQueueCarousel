@@ -136,7 +136,14 @@
         <path d="M3.5 7.5 8 5.7v12.6l-4.5-1.8v-9Zm6-2.3h5v13.6h-5V5.2Zm6.5.5 4.5 1.8v9L16 18.3V5.7Z"></path>
       </svg>
     `;
-    button.addEventListener("click", () => setOpen());
+    const stopNativeQueueToggle = (event) => event.stopPropagation();
+    for (const eventName of ["pointerdown", "pointerup", "mousedown", "mouseup", "keydown", "keyup"]) {
+      button.addEventListener(eventName, stopNativeQueueToggle);
+    }
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setOpen();
+    });
     return button;
   }
 
@@ -207,9 +214,11 @@
 
         .brand-name {
           color: #fff;
-          font-size: 16px;
-          font-weight: 700;
-          letter-spacing: -0.02em;
+          font-family: "Roboto Condensed", "Arial Narrow", Roboto, Arial, sans-serif;
+          font-size: 20px;
+          font-stretch: condensed;
+          font-weight: 500;
+          letter-spacing: 0.01em;
         }
 
         .viewport {
@@ -1374,6 +1383,10 @@
     if (event.key === "Escape") {
       event.preventDefault();
       setOpen(false);
+      return;
+    }
+
+    if (event.target instanceof Element && event.target.closest(`#${BUTTON_ID}`)) {
       return;
     }
 
