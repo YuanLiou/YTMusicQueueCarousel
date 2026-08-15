@@ -10,6 +10,21 @@ Add carousel View for your playing queue.
 
 ## 🚧 Still work in progress ⚠️
 
+
+### What's NOT Work yet
+
+1. No Automatically Self Update Feature
+
+YouTube Music can add music automatically based on the playing queue. However, this extension is NOT support auto update, yet.
+
+You should click the Carousel icon again to get the new list. In other words, any update to the playing queue won't update the Carousel automatically.
+
+
+### What's support
+
+* Browse with keyboard, enter to play and pause
+* You can click the icon on the playing statusbar or the extension icon to make Carousel appear.
+
 ### How to install a Work-in-progress version?
 
 1. You can install from the source code. First Click 'Code' Button then click 'Download ZIP'
@@ -23,6 +38,8 @@ Add carousel View for your playing queue.
 3. Open Chrome browser (or other browser based on Chrome, e.g. Edge, Brave, Vivaldi, Dia, Arc...), Open your extension manage page.
 
 4. Enable 'Developer Mode' and click the Load unpacked.
+
+<img width="60%" height="876" alt="Image" src="https://github.com/user-attachments/assets/710cdc2a-1826-41e3-b395-d020e17fd4b3" />
 
 <img width="60%" alt="Step003" src="https://github.com/user-attachments/assets/8c752193-766b-4150-abea-2adb9499dafc" />
 
