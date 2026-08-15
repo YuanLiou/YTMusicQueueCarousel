@@ -22,8 +22,9 @@ You should click the Carousel icon again to get the new list. In other words, an
 
 ### What's support
 
-* Browse with keyboard, enter to play and pause
+* Browse with keyboard, enter to play and pause.
 * You can click the icon on the playing statusbar or the extension icon to make Carousel appear.
+* Small Layout, you can make it like a small widget.
 
 ### How to install a Work-in-progress version?
 
